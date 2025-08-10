@@ -18,7 +18,7 @@ async function testSupabaseConnection() {
     console.log('❌ Missing environment variables. Please check your .env.local file');
     console.log('📝 Required format:');
     console.log('NEXT_PUBLIC_SUPABASE_URL=https://lunkgjarwqqkpbohneqn.supabase.co');
-    console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here');
+    console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1bmtnamFyd3Fxa3Bib2huZXFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NTAyMDksImV4cCI6MjA3MDMyNjIwOX0.aJNEWby1lrBzYY_pppUcgihBNVwd1Bu-343BX3E7bIQ');
     return;
   }
   

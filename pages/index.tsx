@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import StudentEnrollmentForm from '../components/StudentEnrollmentForm';
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false);
@@ -16,6 +17,11 @@ export default function Home() {
       title: 'Hệ Thống ERP Trung Tâm Tiếng Anh',
       subtitle: 'Hệ Thống Quản Lý Đăng Ký Học Viên',
       success: 'Đăng ký học viên thành công!',
+      quickAccess: {
+        title: 'Truy Cập Nhanh',
+        classSchedule: 'Lịch Học',
+        classScheduleDesc: 'Xem và quản lý lịch học các lớp'
+      },
       stats: {
         title: 'Thống Kê Nhanh',
         totalStudents: 'Tổng Số Học Viên',
@@ -27,6 +33,11 @@ export default function Home() {
       title: 'English Language Center ERP',
       subtitle: 'Student Enrollment Management System',
       success: 'Student enrolled successfully!',
+      quickAccess: {
+        title: 'Quick Access',
+        classSchedule: 'Class Schedule',
+        classScheduleDesc: 'View and manage class schedules'
+      },
       stats: {
         title: 'Quick Stats',
         totalStudents: 'Total Students',
@@ -86,6 +97,34 @@ export default function Home() {
               {currentLabels.success}
             </div>
           )}
+
+          {/* Quick Access Section */}
+          <div className="mb-8">
+            <div className="card">
+              <h3 className="text-lg font-medium mb-4">{currentLabels.quickAccess.title}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Link href="/schedule" className="group">
+                  <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        <svg className="w-8 h-8 text-blue-600 group-hover:text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 group-hover:text-blue-700">
+                          {currentLabels.quickAccess.classSchedule}
+                        </h4>
+                        <p className="text-xs text-gray-500">
+                          {currentLabels.quickAccess.classScheduleDesc}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
