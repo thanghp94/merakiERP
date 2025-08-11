@@ -244,6 +244,25 @@ export default function TestDashboard() {
     }
   };
 
+  const fetchEnrollments = async () => {
+    setIsLoadingEnrollments(true);
+    try {
+      const response = await fetch('/api/enrollments');
+      const result = await response.json();
+      
+      if (result.success) {
+        setEnrollments(result.data);
+      } else {
+        console.error('Failed to fetch enrollments:', result.message);
+        setEnrollments([]);
+      }
+    } catch (error) {
+      console.error('Error fetching enrollments:', error);
+      setEnrollments([]);
+    } finally {
+      setIsLoadingEnrollments(false);
+    }
+  };
 
   const fetchAttendances = async () => {
     setIsLoadingAttendances(true);

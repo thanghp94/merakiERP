@@ -7,6 +7,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'GET':
         return await getAttendance(req, res);
       case 'POST':
+        if (req.body.bulk_create) {
+          return await createBulkAttendance(req, res);
+        }
         return await createAttendance(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
@@ -25,27 +28,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getAttendance(req: NextApiRequest, res: NextApiResponse) {
-  const { session_id, student_id, status, date, limit = 50, offset = 0 } = req.query;
+  const { main_session_id, enrollment_id, status, date, limit = 50, offset = 0 } = req.query;
 
   let query = supabase
     .from('attendance')
-    .select('*')
+    .select(`
+      *,
+      enrollments (
+        id,
+        students (
+          id,
+          full_name,
+          email
+        )
+      )
+    `)
     .order('created_at', { ascending: false });
 
-  if (session_id) {
-    query = query.eq('session_id', session_id);
+  if (main_session_id) {
+    query = query.eq('main_session_id', main_session_id);
   }
 
-  if (student_id) {
-    query = query.eq('student_id', student_id);
+  if (enrollment_id) {
+    query = query.eq('enrollment_id', enrollment_id);
   }
 
   if (status) {
     query = query.eq('status', status);
-  }
-
-  if (date) {
-    query = query.eq('teaching_sessions.session_date', date);
   }
 
   if (limit) {
@@ -77,19 +86,19 @@ async function getAttendance(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createAttendance(req: NextApiRequest, res: NextApiResponse) {
-  const { session_id, student_id, status = 'present', check_in_time, data = {} } = req.body;
+  const { main_session_id, enrollment_id, status = 'present', data = {} } = req.body;
 
-  if (!session_id) {
+  if (!main_session_id) {
     return res.status(400).json({ 
       success: false, 
-      message: 'ID buổi học là bắt buộc' 
+      message: 'ID buổi học chính là bắt buộc' 
     });
   }
 
-  if (!student_id) {
+  if (!enrollment_id) {
     return res.status(400).json({ 
       success: false, 
-      message: 'ID học sinh là bắt buộc' 
+      message: 'ID đăng ký là bắt buộc' 
     });
   }
 
@@ -97,8 +106,8 @@ async function createAttendance(req: NextApiRequest, res: NextApiResponse) {
   const { data: existingAttendance } = await supabase
     .from('attendance')
     .select('id')
-    .eq('session_id', session_id)
-    .eq('student_id', student_id)
+    .eq('main_session_id', main_session_id)
+    .eq('enrollment_id', enrollment_id)
     .single();
 
   if (existingAttendance) {
@@ -111,13 +120,22 @@ async function createAttendance(req: NextApiRequest, res: NextApiResponse) {
   const { data: attendance, error } = await supabase
     .from('attendance')
     .insert({
-      session_id,
-      student_id,
+      main_session_id,
+      enrollment_id,
       status,
-      check_in_time: check_in_time || new Date().toISOString(),
       data
     })
-    .select('*')
+    .select(`
+      *,
+      enrollments (
+        id,
+        students (
+          id,
+          full_name,
+          email
+        )
+      )
+    `)
     .single();
 
   if (error) {
@@ -133,4 +151,118 @@ async function createAttendance(req: NextApiRequest, res: NextApiResponse) {
     data: attendance,
     message: 'Tạo điểm danh mới thành công'
   });
+}
+
+async function createBulkAttendance(req: NextApiRequest, res: NextApiResponse) {
+  const { main_session_id, class_id } = req.body;
+
+  if (!main_session_id) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'ID buổi học chính là bắt buộc' 
+    });
+  }
+
+  if (!class_id) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'ID lớp học là bắt buộc' 
+    });
+  }
+
+  try {
+    // Get all active enrollments for this class
+    const { data: enrollments, error: enrollmentError } = await supabase
+      .from('enrollments')
+      .select(`
+        id,
+        students (
+          id,
+          full_name,
+          email
+        )
+      `)
+      .eq('class_id', class_id)
+      .eq('status', 'active');
+
+    if (enrollmentError) {
+      console.error('Error fetching enrollments:', enrollmentError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Không thể lấy danh sách đăng ký' 
+      });
+    }
+
+    if (!enrollments || enrollments.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Không tìm thấy học sinh nào trong lớp này' 
+      });
+    }
+
+    // Check for existing attendance records
+    const { data: existingAttendance } = await supabase
+      .from('attendance')
+      .select('enrollment_id')
+      .eq('main_session_id', main_session_id);
+
+    const existingEnrollmentIds = existingAttendance?.map(a => a.enrollment_id) || [];
+
+    // Filter out enrollments that already have attendance records
+    const newEnrollments = enrollments.filter(enrollment => 
+      !existingEnrollmentIds.includes(enrollment.id)
+    );
+
+    if (newEnrollments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: 'Tất cả học sinh đã có điểm danh cho buổi học này'
+      });
+    }
+
+    // Create attendance records for all new enrollments
+    const attendanceRecords = newEnrollments.map(enrollment => ({
+      main_session_id,
+      enrollment_id: enrollment.id,
+      status: 'present', // Default to present
+      data: {}
+    }));
+
+    const { data: createdAttendance, error: createError } = await supabase
+      .from('attendance')
+      .insert(attendanceRecords)
+      .select(`
+        *,
+        enrollments (
+          id,
+          students (
+            id,
+            full_name,
+            email
+          )
+        )
+      `);
+
+    if (createError) {
+      console.error('Error creating bulk attendance:', createError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Không thể tạo điểm danh hàng loạt' 
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: createdAttendance,
+      message: `Đã tạo điểm danh cho ${createdAttendance?.length || 0} học sinh`
+    });
+
+  } catch (error) {
+    console.error('Bulk attendance creation error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi khi tạo điểm danh hàng loạt' 
+    });
+  }
 }

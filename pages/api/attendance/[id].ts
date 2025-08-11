@@ -40,30 +40,14 @@ async function getAttendance(id: string, res: NextApiResponse) {
     .from('attendance')
     .select(`
       *,
-      teaching_sessions (
+      enrollments (
         id,
-        session_date,
-        start_time,
-        end_time,
-        classes (
-          id,
-          class_name,
-          facilities (
-            id,
-            name
-          )
-        ),
-        employees (
+        students (
           id,
           full_name,
-          position
+          email,
+          phone
         )
-      ),
-      students (
-        id,
-        full_name,
-        email,
-        phone
       )
     `)
     .eq('id', id)
@@ -91,13 +75,12 @@ async function getAttendance(id: string, res: NextApiResponse) {
 }
 
 async function updateAttendance(id: string, req: NextApiRequest, res: NextApiResponse) {
-  const { session_id, student_id, status, check_in_time, data } = req.body;
+  const { session_id, enrollment_id, status, data } = req.body;
 
   const updateData: any = {};
   if (session_id !== undefined) updateData.session_id = session_id;
-  if (student_id !== undefined) updateData.student_id = student_id;
+  if (enrollment_id !== undefined) updateData.enrollment_id = enrollment_id;
   if (status !== undefined) updateData.status = status;
-  if (check_in_time !== undefined) updateData.check_in_time = check_in_time;
   if (data !== undefined) updateData.data = data;
 
   if (Object.keys(updateData).length === 0) {
@@ -113,30 +96,14 @@ async function updateAttendance(id: string, req: NextApiRequest, res: NextApiRes
     .eq('id', id)
     .select(`
       *,
-      teaching_sessions (
+      enrollments (
         id,
-        session_date,
-        start_time,
-        end_time,
-        classes (
-          id,
-          class_name,
-          facilities (
-            id,
-            name
-          )
-        ),
-        employees (
+        students (
           id,
           full_name,
-          position
+          email,
+          phone
         )
-      ),
-      students (
-        id,
-        full_name,
-        email,
-        phone
       )
     `)
     .single();

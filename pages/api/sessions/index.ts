@@ -27,9 +27,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getSessions(req: NextApiRequest, res: NextApiResponse) {
   const { class_id, teacher_id, start_date, end_date, limit = 100, offset = 0 } = req.query;
 
+  // Query with joins to get main_sessions and classes data
   let query = supabase
     .from('sessions')
-    .select('*')
+    .select(`
+      *,
+      main_sessions!sessions_main_session_id_fkey (
+        main_session_id,
+        main_session_name,
+        scheduled_date,
+        class_id,
+        classes (
+          id,
+          class_name,
+          data
+        )
+      ),
+      employees!sessions_teacher_id_fkey (
+        id,
+        full_name
+      )
+    `)
     .order('start_time', { ascending: true });
 
   // Filter by date range if provided (for schedule view)
@@ -39,7 +57,10 @@ async function getSessions(req: NextApiRequest, res: NextApiResponse) {
       .lte('date', end_date);
   }
 
-  // Note: class_id filtering removed since we're not joining with main_sessions
+  if (class_id) {
+    // Filter by class through main_sessions relationship
+    query = query.eq('main_sessions.class_id', class_id);
+  }
 
   if (teacher_id) {
     query = query.eq('teacher_id', teacher_id);

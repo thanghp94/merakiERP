@@ -1,4 +1,4 @@
-export type TabType = 'facilities' | 'classes' | 'employees' | 'students' | 'enrollments' | 'attendance' | 'finances' | 'tasks' | 'schedule' | 'api-test';
+export type TabType = 'facilities' | 'classes' | 'employees' | 'students' | 'sessions' | 'attendance' | 'finances' | 'tasks' | 'schedule' | 'api-test';
 
 export interface ApiTestResult {
   endpoint: string;

@@ -148,30 +148,18 @@ CREATE TABLE IF NOT EXISTS sessions (
     teaching_assistant_id UUID NULL,
     date DATE NULL,
     CONSTRAINT sessions_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_sessions_teacher_id FOREIGN KEY (teacher_id) REFERENCES employees (id),
     CONSTRAINT fk_sessions_ta_id FOREIGN KEY (teaching_assistant_id) REFERENCES employees (id),
     CONSTRAINT fk_sessions_lesson_id FOREIGN KEY (lesson_id) REFERENCES main_sessions (main_session_id)
 );
 
--- Teaching Sessions table (existing table for compatibility)
-CREATE TABLE IF NOT EXISTS teaching_sessions (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
-    session_date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled')),
-    data JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 
 -- Attendance table
 CREATE TABLE IF NOT EXISTS attendance (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    student_id UUID REFERENCES students(id) ON DELETE CASCADE,
-    teaching_session_id UUID REFERENCES teaching_sessions(id) ON DELETE CASCADE,
-    status VARCHAR(20) DEFAULT 'present' CHECK (status IN ('present', 'absent', 'late', 'excused')),
-    notes TEXT,
+    enrollment_id UUID REFERENCES enrollments(id) ON DELETE CASCADE,
+    main_session_id UUID REFERENCES main_sessions(main_session_id) ON DELETE CASCADE,
+    status TEXT DEFAULT 'present' CHECK (status IN ('present', 'absent', 'late', 'excused')),
     data JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -213,10 +201,8 @@ CREATE INDEX IF NOT EXISTS idx_main_sessions_date ON main_sessions(scheduled_dat
 CREATE INDEX IF NOT EXISTS idx_sessions_teacher ON sessions(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_lesson ON sessions(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_start_time ON sessions(start_time);
-CREATE INDEX IF NOT EXISTS idx_teaching_sessions_class ON teaching_sessions(class_id);
-CREATE INDEX IF NOT EXISTS idx_teaching_sessions_date ON teaching_sessions(session_date);
-CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_session ON attendance(teaching_session_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_enrollment ON attendance(enrollment_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_main_session ON attendance(main_session_id);
 CREATE INDEX IF NOT EXISTS idx_finances_student ON finances(student_id);
 CREATE INDEX IF NOT EXISTS idx_finances_date ON finances(transaction_date);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
@@ -225,7 +211,6 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 -- GIN indexes for JSONB queries on new tables
 CREATE INDEX IF NOT EXISTS idx_employees_data ON employees USING GIN (data);
 CREATE INDEX IF NOT EXISTS idx_sessions_data ON sessions USING GIN (data);
-CREATE INDEX IF NOT EXISTS idx_teaching_sessions_data ON teaching_sessions USING GIN (data);
 CREATE INDEX IF NOT EXISTS idx_attendance_data ON attendance USING GIN (data);
 CREATE INDEX IF NOT EXISTS idx_finances_data ON finances USING GIN (data);
 CREATE INDEX IF NOT EXISTS idx_tasks_data ON tasks USING GIN (data);
@@ -238,9 +223,6 @@ CREATE TRIGGER update_main_sessions_updated_at BEFORE UPDATE ON main_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_sessions_updated_at BEFORE UPDATE ON sessions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_teaching_sessions_updated_at BEFORE UPDATE ON teaching_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_attendance_updated_at BEFORE UPDATE ON attendance

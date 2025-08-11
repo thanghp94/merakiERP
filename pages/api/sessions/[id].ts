@@ -36,44 +36,78 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getSession(req: NextApiRequest, res: NextApiResponse, id: string) {
-  const { data, error } = await supabase
+  // First get the session
+  const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .select(`
-      *,
-      main_sessions!fk_sessions_lesson_id (
-        main_session_id,
-        main_session_name,
-        scheduled_date,
-        class_id,
-        classes (
-          id,
-          class_name,
-          data
-        )
-      ),
-      employees!fk_sessions_teacher_id (
-        id,
-        full_name
-      ),
-      employees!fk_sessions_ta_id (
-        id,
-        full_name
-      )
-    `)
+    .select('*')
     .eq('id', id)
     .single();
 
-  if (error) {
-    console.error('Supabase error:', error);
+  if (sessionError) {
+    console.error('Supabase error:', sessionError);
     return res.status(404).json({ 
       success: false, 
       message: 'Không tìm thấy session' 
     });
   }
 
+  // Get the main session
+  const { data: mainSession, error: mainSessionError } = await supabase
+    .from('main_sessions')
+    .select(`
+      main_session_id,
+      main_session_name,
+      scheduled_date,
+      class_id,
+      classes (
+        id,
+        class_name,
+        data
+      )
+    `)
+    .eq('main_session_id', session.lesson_id)
+    .single();
+
+  if (mainSessionError) {
+    console.error('Main session error:', mainSessionError);
+  }
+
+  // Get teacher info
+  const { data: teacher, error: teacherError } = await supabase
+    .from('employees')
+    .select('id, full_name')
+    .eq('id', session.teacher_id)
+    .single();
+
+  if (teacherError) {
+    console.error('Teacher error:', teacherError);
+  }
+
+  // Get teaching assistant info if exists
+  let teachingAssistant = null;
+  if (session.teaching_assistant_id) {
+    const { data: ta, error: taError } = await supabase
+      .from('employees')
+      .select('id, full_name')
+      .eq('id', session.teaching_assistant_id)
+      .single();
+
+    if (!taError) {
+      teachingAssistant = ta;
+    }
+  }
+
+  // Combine the data
+  const combinedData = {
+    ...session,
+    main_sessions: mainSession,
+    teacher: teacher,
+    teaching_assistant: teachingAssistant
+  };
+
   return res.status(200).json({
     success: true,
-    data,
+    data: combinedData,
     message: 'Lấy thông tin session thành công'
   });
 }
@@ -99,45 +133,79 @@ async function updateSession(req: NextApiRequest, res: NextApiResponse, id: stri
   if (end_time !== undefined) updateData.end_time = end_time;
   if (data !== undefined) updateData.data = data;
 
-  const { data: session, error } = await supabase
+  // Update the session
+  const { data: session, error: updateError } = await supabase
     .from('sessions')
     .update(updateData)
     .eq('id', id)
-    .select(`
-      *,
-      main_sessions!fk_sessions_lesson_id (
-        main_session_id,
-        main_session_name,
-        scheduled_date,
-        class_id,
-        classes (
-          id,
-          class_name,
-          data
-        )
-      ),
-      employees!fk_sessions_teacher_id (
-        id,
-        full_name
-      ),
-      employees!fk_sessions_ta_id (
-        id,
-        full_name
-      )
-    `)
+    .select('*')
     .single();
 
-  if (error) {
-    console.error('Supabase error:', error);
+  if (updateError) {
+    console.error('Supabase error:', updateError);
     return res.status(500).json({ 
       success: false, 
       message: 'Không thể cập nhật session' 
     });
   }
 
+  // Get the main session
+  const { data: mainSession, error: mainSessionError } = await supabase
+    .from('main_sessions')
+    .select(`
+      main_session_id,
+      main_session_name,
+      scheduled_date,
+      class_id,
+      classes (
+        id,
+        class_name,
+        data
+      )
+    `)
+    .eq('main_session_id', session.lesson_id)
+    .single();
+
+  if (mainSessionError) {
+    console.error('Main session error:', mainSessionError);
+  }
+
+  // Get teacher info
+  const { data: teacher, error: teacherError } = await supabase
+    .from('employees')
+    .select('id, full_name')
+    .eq('id', session.teacher_id)
+    .single();
+
+  if (teacherError) {
+    console.error('Teacher error:', teacherError);
+  }
+
+  // Get teaching assistant info if exists
+  let teachingAssistant = null;
+  if (session.teaching_assistant_id) {
+    const { data: ta, error: taError } = await supabase
+      .from('employees')
+      .select('id, full_name')
+      .eq('id', session.teaching_assistant_id)
+      .single();
+
+    if (!taError) {
+      teachingAssistant = ta;
+    }
+  }
+
+  // Combine the data
+  const combinedData = {
+    ...session,
+    main_sessions: mainSession,
+    teacher: teacher,
+    teaching_assistant: teachingAssistant
+  };
+
   return res.status(200).json({
     success: true,
-    data: session,
+    data: combinedData,
     message: 'Cập nhật session thành công'
   });
 }

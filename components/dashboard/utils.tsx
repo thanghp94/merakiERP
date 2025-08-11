@@ -39,7 +39,7 @@ export const tabs = [
   { id: 'classes', label: 'Lớp học', icon: '📚' },
   { id: 'employees', label: 'Nhân viên', icon: '👥' },
   { id: 'students', label: 'Học sinh', icon: '🎓' },
-  { id: 'enrollments', label: 'Đăng ký', icon: '📝' },
+  { id: 'sessions', label: 'Buổi học', icon: '🎯' },
   { id: 'attendance', label: 'Điểm danh', icon: '✅' },
   { id: 'finances', label: 'Tài chính', icon: '💰' },
   { id: 'tasks', label: 'Bài tập', icon: '📋' },

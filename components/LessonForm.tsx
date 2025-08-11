@@ -376,13 +376,19 @@ const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, onCancel, classId }) 
     }
 
     try {
+      // Prepare data with lesson number
+      const submitData = {
+        ...formData,
+        lesson_number: selectedLessonNumber // Include the selected lesson number
+      };
+
       // Submit to main-sessions API
       const response = await fetch('/api/main-sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();

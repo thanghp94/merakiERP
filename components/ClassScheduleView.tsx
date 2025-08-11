@@ -548,22 +548,34 @@ const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({ classId }) => {
       );
     }
 
-    // Get all sessions for the week
-    const weekDates: string[] = [];
-    const startDate = new Date(getStartDate());
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      weekDates.push(date.toISOString().split('T')[0]);
-    }
+    if (viewMode === 'day') {
+      // Day view - show only current day
+      const currentDateStr = currentDate.toISOString().split('T')[0];
+      const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+      
+      return (
+        <div className="flex">
+          {renderDayColumn(currentDateStr, dayName)}
+        </div>
+      );
+    } else {
+      // Week view - show all 7 days
+      const weekDates: string[] = [];
+      const startDate = new Date(getStartDate());
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        weekDates.push(date.toISOString().split('T')[0]);
+      }
 
-    return (
-      <div className="flex">
-        {weekDays.map((dayName, index) => 
-          renderDayColumn(weekDates[index], dayName)
-        )}
-      </div>
-    );
+      return (
+        <div className="flex">
+          {weekDays.map((dayName, index) => 
+            renderDayColumn(weekDates[index], dayName)
+          )}
+        </div>
+      );
+    }
   };
 
   return (
@@ -604,8 +616,13 @@ const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({ classId }) => {
               </button>
               <span className="font-medium min-w-[120px] text-center">
                 {viewMode === 'day' 
-                  ? currentDate.toLocaleDateString()
-                  : `Week of ${getStartDate()}`
+                  ? currentDate.toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })
+                  : `${new Date(getStartDate()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(getEndDate()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
                 }
               </span>
               <button

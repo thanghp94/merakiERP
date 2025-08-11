@@ -56,7 +56,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         end_time,
         total_duration_minutes,
         class_id,
-        sessions
+        sessions,
+        lesson_number // Add lesson_number from form
       } = req.body;
 
       // Validate required fields
@@ -65,6 +66,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           success: false,
           message: 'Thiếu thông tin bắt buộc'
         });
+      }
+
+      // Extract lesson number from main_session_name if not provided directly
+      let extractedLessonId = lesson_number;
+      if (!extractedLessonId && main_session_name) {
+        // Try to extract lesson number from name like "GS12 test.U8.L3"
+        const lessonMatch = main_session_name.match(/\.L(\d+)/);
+        if (lessonMatch) {
+          extractedLessonId = `L${lessonMatch[1]}`;
+        }
       }
 
       // Calculate start and end times from sessions if not provided
@@ -84,21 +95,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      // Prepare minimal data JSONB field - only store essential timing info
+      // Prepare comprehensive data JSONB field with all timing information
       const dataField = {
         start_time: calculatedStartTime,
         end_time: calculatedEndTime,
         total_duration_minutes: calculatedTotalDuration,
+        // Store full timestamp versions for compatibility
+        start_timestamp: calculatedStartTime ? `${scheduled_date}T${calculatedStartTime}:00+00:00` : null,
+        end_timestamp: calculatedEndTime ? `${scheduled_date}T${calculatedEndTime}:00+00:00` : null,
         created_by_form: true
       };
 
-      // Insert main session with minimal data (removed total_duration_minutes column)
+      // Insert main session with lesson_id included (all timing data stored in JSONB data field)
       const { data: mainSessionData, error: mainSessionError } = await supabase
         .from('main_sessions')
         .insert({
           main_session_name,
           scheduled_date,
           class_id,
+          lesson_id: extractedLessonId, // Save the lesson number to lesson_id field
           data: dataField
         })
         .select()
@@ -113,32 +128,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      // Now create individual teaching sessions
+      // Now create individual sessions
       if (sessions && sessions.length > 0) {
-        const teachingSessionsToInsert = sessions.map((session: any) => ({
-          main_session_id: mainSessionData.id,
+        const sessionsToInsert = sessions.map((session: any) => ({
+          main_session_id: mainSessionData.main_session_id, // Link to main session (UUID)
           subject_type: session.subject_type,
-          teacher_id: session.teacher_id,
+          teacher_id: session.teacher_id || null, // Handle null teachers
           teaching_assistant_id: session.teaching_assistant_id || null,
-          location_id: session.location_id,
-          start_time: session.start_time,
-          end_time: session.end_time,
-          duration_minutes: session.duration_minutes || 0,
+          location_id: session.location_id ? String(session.location_id) : null, // Convert to text
+          start_time: `${scheduled_date}T${session.start_time}:00+00:00`, // Combine date and time
+          end_time: `${scheduled_date}T${session.end_time}:00+00:00`, // Combine date and time
+          date: scheduled_date,
           data: {
+            lesson_id: session.lesson_id || `${session.subject_type}${Date.now()}`,
+            subject_name: `${main_session_name} - ${session.subject_type}`,
+            subject_type: session.subject_type,
+            main_session_id: mainSessionData.main_session_id,
             created_by_form: true
           }
         }));
 
         const { error: sessionsError } = await supabase
-          .from('teaching_sessions')
-          .insert(teachingSessionsToInsert);
+          .from('sessions')
+          .insert(sessionsToInsert);
 
         if (sessionsError) {
-          console.error('Error creating teaching sessions:', sessionsError);
+          console.error('Error creating sessions:', sessionsError);
           // Don't fail the main session creation, but log the error
-          console.warn('Main session created but some teaching sessions failed to create');
+          console.warn('Main session created but some sessions failed to create');
         } else {
-          console.log('✅ Created', sessions.length, 'teaching sessions successfully');
+          console.log('✅ Created', sessions.length, 'sessions successfully');
         }
       }
 
