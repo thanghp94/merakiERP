@@ -65,7 +65,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
       }
 
       const session = sessionResult.data;
-      mainSessionId = session.lesson_id; // This is the main_session_id
+      mainSessionId = session.main_session_id; // Get the correct main_session_id
       
       // If classId is not provided, get it from main session
       if (!classId) {
@@ -140,26 +140,10 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
       setAttendance(initialAttendance);
     } catch (error) {
       console.error('Error fetching students:', error);
-      // Fallback to mock data if API fails
-      const mockEnrollments: Enrollment[] = [
-        { id: '1', students: { id: '1', full_name: 'Minh Trí', english_name: 'Tim' } },
-        { id: '2', students: { id: '2', full_name: 'Phúc Khánh', english_name: 'Red' } },
-        { id: '3', students: { id: '3', full_name: 'Nguyễn Lê Nam Phương', english_name: 'Nam' } },
-        { id: '4', students: { id: '4', full_name: 'Phương Chi', english_name: 'Elsa' } },
-        { id: '5', students: { id: '5', full_name: 'Phạm Bảo Nam', english_name: 'Max' } },
-      ];
-      
-      setEnrollments(mockEnrollments);
-      
-      const initialAttendance: { [key: string]: AttendanceRecord } = {};
-      mockEnrollments.forEach(enrollment => {
-        initialAttendance[enrollment.id] = {
-          enrollment_id: enrollment.id,
-          status: null,
-          performance_note: ''
-        };
-      });
-      setAttendance(initialAttendance);
+      // Show error message instead of fallback data
+      alert('Không thể tải danh sách học sinh. Vui lòng thử lại sau.');
+      setEnrollments([]);
+      setAttendance({});
     } finally {
       setIsLoading(false);
     }

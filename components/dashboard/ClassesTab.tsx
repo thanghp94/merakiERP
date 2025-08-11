@@ -1,6 +1,6 @@
 import React from 'react';
 import ClassForm from '../ClassForm';
-import LessonForm from '../LessonForm';
+import MainSessionForm from '../MainSessionForm';
 import { Class, Facility, ProgramType, UnitOption } from './types';
 import { formatDate, getStatusBadge, getNextSuggestedUnit } from './utils';
 
@@ -59,7 +59,7 @@ export default function ClassesTab({
       </div>
 
       {selectedClassForLesson ? (
-        <LessonForm 
+        <MainSessionForm 
           classId={selectedClassForLesson}
           onSubmit={(data: any) => {
             console.log('Lesson form submitted for class:', selectedClassForLesson, data);

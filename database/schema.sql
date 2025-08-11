@@ -118,18 +118,16 @@ CREATE TABLE IF NOT EXISTS employees (
 
 -- Main Sessions table (parent sessions)
 CREATE TABLE IF NOT EXISTS main_sessions (
-    main_session_id SERIAL NOT NULL,
     main_session_name CHARACTER VARYING(255) NOT NULL,
-    total_duration_minutes INTEGER NOT NULL,
     scheduled_date DATE NOT NULL,
-    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     class_id UUID NULL,
     lesson_id TEXT NULL,
-    CONSTRAINT main_session_pkey PRIMARY KEY (main_session_id),
+    main_session_id UUID NOT NULL DEFAULT gen_random_uuid(),
+    data JSONB NULL,
+    CONSTRAINT main_sessions_pkey PRIMARY KEY (main_session_id),
     CONSTRAINT lessons_class_id_fkey FOREIGN KEY (class_id) REFERENCES classes (id)
 );
 

@@ -44,13 +44,13 @@ interface Class {
   };
 }
 
-interface LessonFormProps {
+interface MainSessionFormProps {
   onSubmit: (data: MainSessionFormData) => void;
   onCancel?: () => void;
   classId?: string; // Add class ID prop
 }
 
-const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, onCancel, classId }) => {
+const MainSessionForm: React.FC<MainSessionFormProps> = ({ onSubmit, onCancel, classId }) => {
   // State for dropdown data
   const [teachers, setTeachers] = useState<Employee[]>([]);
   const [teachingAssistants, setTeachingAssistants] = useState<Employee[]>([]);
@@ -376,11 +376,17 @@ const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, onCancel, classId }) 
     }
 
     try {
-      // Prepare data with lesson number
+      // Detect user's timezone
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      // Prepare data with lesson number and timezone
       const submitData = {
         ...formData,
-        lesson_number: selectedLessonNumber // Include the selected lesson number
+        lesson_number: selectedLessonNumber, // Include the selected lesson number
+        timezone: userTimezone // Include user's timezone
       };
+
+      console.log('Submitting with timezone:', userTimezone); // Debug log
 
       // Submit to main-sessions API
       const response = await fetch('/api/main-sessions', {
@@ -398,7 +404,14 @@ const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, onCancel, classId }) 
         // Reset form or call onSubmit callback
         onSubmit(formData);
       } else {
-        alert(`Lỗi: ${result.message}`);
+        // Handle different types of errors
+        if (response.status === 409) {
+          // Schedule conflict error
+          alert(`⚠️ Xung đột lịch dạy!\n\n${result.message}`);
+        } else {
+          // Other errors
+          alert(`Lỗi: ${result.message}`);
+        }
       }
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -737,4 +750,4 @@ const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, onCancel, classId }) 
   );
 };
 
-export default LessonForm;
+export default MainSessionForm;

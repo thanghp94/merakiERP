@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { convertToUTC, extractTimezone, convertFromUTC } from '../../../lib/utils/timezone';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -60,6 +61,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         lesson_number // Add lesson_number from form
       } = req.body;
 
+      // Extract timezone using utility function
+      const timezone = extractTimezone(req.body);
+
       // Validate required fields
       if (!main_session_name || !scheduled_date || !class_id) {
         return res.status(400).json({
@@ -101,8 +105,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         end_time: calculatedEndTime,
         total_duration_minutes: calculatedTotalDuration,
         // Store full timestamp versions for compatibility
-        start_timestamp: calculatedStartTime ? `${scheduled_date}T${calculatedStartTime}:00+00:00` : null,
-        end_timestamp: calculatedEndTime ? `${scheduled_date}T${calculatedEndTime}:00+00:00` : null,
+        start_timestamp: calculatedStartTime ? `${scheduled_date}T${calculatedStartTime}:00` : null,
+        end_timestamp: calculatedEndTime ? `${scheduled_date}T${calculatedEndTime}:00` : null,
         created_by_form: true
       };
 
@@ -128,25 +132,123 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      // Now create individual sessions
+      // Check for teacher schedule conflicts before creating sessions
       if (sessions && sessions.length > 0) {
-        const sessionsToInsert = sessions.map((session: any) => ({
-          main_session_id: mainSessionData.main_session_id, // Link to main session (UUID)
-          subject_type: session.subject_type,
-          teacher_id: session.teacher_id || null, // Handle null teachers
-          teaching_assistant_id: session.teaching_assistant_id || null,
-          location_id: session.location_id ? String(session.location_id) : null, // Convert to text
-          start_time: `${scheduled_date}T${session.start_time}:00+00:00`, // Combine date and time
-          end_time: `${scheduled_date}T${session.end_time}:00+00:00`, // Combine date and time
-          date: scheduled_date,
-          data: {
-            lesson_id: session.lesson_id || `${session.subject_type}${Date.now()}`,
-            subject_name: `${main_session_name} - ${session.subject_type}`,
-            subject_type: session.subject_type,
-            main_session_id: mainSessionData.main_session_id,
-            created_by_form: true
+        console.log('🔍 Checking for teacher schedule conflicts...');
+        
+        for (const session of sessions) {
+          if (session.teacher_id) {
+            // Convert input times to UTC for consistent comparison with existing sessions
+            const startTimeUTC = convertToUTC({
+              timezone,
+              date: scheduled_date,
+              time: session.start_time
+            });
+            const endTimeUTC = convertToUTC({
+              timezone,
+              date: scheduled_date,
+              time: session.end_time
+            });
+            
+            // Check for overlapping sessions for this teacher
+            // Correct overlap logic: existing_start < new_end AND existing_end > new_start
+            const { data: conflictingSessions, error: conflictError } = await supabase
+              .from('sessions')
+              .select(`
+                id,
+                start_time,
+                end_time,
+                teacher_id,
+                data,
+                employees!sessions_teacher_id_fkey (
+                  full_name
+                )
+              `)
+              .eq('teacher_id', session.teacher_id)
+              .eq('date', scheduled_date)
+              .lt('start_time', endTimeUTC)
+              .gt('end_time', startTimeUTC);
+            
+            if (conflictError) {
+              console.error('Error checking for conflicts:', conflictError);
+              return res.status(500).json({
+                success: false,
+                message: 'Lỗi khi kiểm tra xung đột lịch dạy',
+                error: conflictError.message
+              });
+            }
+            
+            if (conflictingSessions && conflictingSessions.length > 0) {
+              const conflictingSession = conflictingSessions[0] as any;
+              const teacherName = conflictingSession.employees?.full_name || 'Giáo viên';
+              
+              // Format the conflict time properly - extract just the time part
+              const conflictStartTime = new Date(conflictingSession.start_time);
+              const conflictEndTime = new Date(conflictingSession.end_time);
+              
+              const conflictTimeRange = `${conflictStartTime.toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: timezone
+              })} - ${conflictEndTime.toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: timezone
+              })}`;
+              
+              // Delete the main session since we can't create the sessions
+              await supabase
+                .from('main_sessions')
+                .delete()
+                .eq('main_session_id', mainSessionData.main_session_id);
+              
+              return res.status(409).json({
+                success: false,
+                message: `Xung đột lịch dạy: ${teacherName} đã có lịch dạy vào ${conflictTimeRange} ngày ${scheduled_date}. Vui lòng chọn thời gian khác.`,
+                conflict_details: {
+                  teacher_name: teacherName,
+                  conflict_time: conflictTimeRange,
+                  conflict_date: scheduled_date,
+                  session_type: session.subject_type,
+                  requested_time: `${session.start_time} - ${session.end_time}`
+                }
+              });
+            }
           }
-        }));
+        }
+        
+        // No conflicts found, proceed to create sessions
+        const sessionsToInsert = sessions.map((session: any) => {
+          // Convert user timezone to UTC for consistent storage
+          const startTimeUTC = convertToUTC({
+            timezone,
+            date: scheduled_date,
+            time: session.start_time
+          });
+          const endTimeUTC = convertToUTC({
+            timezone,
+            date: scheduled_date,
+            time: session.end_time
+          });
+          
+          return {
+            main_session_id: mainSessionData.main_session_id, // Link to main session (UUID)
+            subject_type: session.subject_type,
+            teacher_id: session.teacher_id || null, // Handle null teachers
+            teaching_assistant_id: session.teaching_assistant_id || null,
+            location_id: session.location_id ? String(session.location_id) : null, // Convert to text
+            start_time: startTimeUTC, // Store in UTC
+            end_time: endTimeUTC, // Store in UTC
+            date: scheduled_date,
+            data: {
+              lesson_id: session.lesson_id || `${session.subject_type}${Date.now()}`,
+              subject_name: `${main_session_name} - ${session.subject_type}`,
+              subject_type: session.subject_type,
+              main_session_id: mainSessionData.main_session_id,
+              created_by_form: true
+            }
+          };
+        });
 
         const { error: sessionsError } = await supabase
           .from('sessions')
@@ -154,8 +256,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (sessionsError) {
           console.error('Error creating sessions:', sessionsError);
-          // Don't fail the main session creation, but log the error
-          console.warn('Main session created but some sessions failed to create');
+          
+          // Delete the main session since sessions failed to create
+          await supabase
+            .from('main_sessions')
+            .delete()
+            .eq('main_session_id', mainSessionData.main_session_id);
+          
+          return res.status(500).json({
+            success: false,
+            message: 'Lỗi khi tạo các buổi học con',
+            error: sessionsError.message
+          });
         } else {
           console.log('✅ Created', sessions.length, 'sessions successfully');
         }

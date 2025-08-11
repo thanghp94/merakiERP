@@ -25,6 +25,19 @@ interface Session {
       };
     };
   };
+  teacher?: {
+    id: string;
+    full_name: string;
+  };
+  teaching_assistant?: {
+    id: string;
+    full_name: string;
+  };
+  location?: {
+    facility_name: string;
+    room_name: string;
+    room_id: string;
+  };
   employees?: {
     id: string;
     full_name: string;
@@ -206,21 +219,21 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
             <div className="flex items-center gap-1">
               <span className="text-sm">👨‍🏫</span>
               <span className="text-sm font-medium">
-                {session.data?.teacher_name || 'Chưa phân công'}
+                {session.teacher?.full_name || 'Chưa phân công'}
               </span>
             </div>
             
             <div className="flex items-center gap-1">
               <span className="text-sm">👩‍🎓</span>
               <span className="text-sm">
-                TA {session.data?.location?.replace('R1.1 ', '') || 'Van'}
+                {session.teaching_assistant?.full_name || 'Chưa có TA'}
               </span>
             </div>
             
             <div className="flex items-center gap-1">
               <span className="text-sm">📍</span>
               <span className="text-sm">
-                {session.data?.location?.match(/R\d+\.\d+/)?.[0] || 'R1.1'}
+                {session.location ? `${session.location.room_name}` : 'Chưa có phòng'}
               </span>
             </div>
           </div>
@@ -231,7 +244,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
             >
               Điểm danh
             </button>
-            {session.data?.teacher_name && (
+            {session.teacher && (
               <button
                 onClick={() => handleTeacherFeedback(session.id, session.teacher_id)}
                 className="px-3 py-1 bg-white bg-opacity-70 hover:bg-opacity-90 rounded text-xs font-medium transition-colors"

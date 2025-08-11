@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getSessions(req: NextApiRequest, res: NextApiResponse) {
   const { class_id, teacher_id, start_date, end_date, limit = 100, offset = 0 } = req.query;
 
-  // Query with joins to get main_sessions and classes data
+  // Query with joins to get main_sessions, classes, and teacher data
   let query = supabase
     .from('sessions')
     .select(`
@@ -43,7 +43,7 @@ async function getSessions(req: NextApiRequest, res: NextApiResponse) {
           data
         )
       ),
-      employees!sessions_teacher_id_fkey (
+      teacher:employees!sessions_teacher_id_fkey (
         id,
         full_name
       )
@@ -77,7 +77,7 @@ async function getSessions(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
-  const { data, error } = await query;
+  const { data: sessions, error } = await query;
 
   if (error) {
     console.error('Supabase error:', error);
@@ -87,9 +87,56 @@ async function getSessions(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
+  // Fetch TA data separately for sessions that have teaching_assistant_id
+  const sessionsWithTA = await Promise.all(
+    sessions.map(async (session) => {
+      if (session.teaching_assistant_id) {
+        const { data: ta } = await supabase
+          .from('employees')
+          .select('id, full_name')
+          .eq('id', session.teaching_assistant_id)
+          .single();
+        
+        return {
+          ...session,
+          teaching_assistant: ta
+        };
+      }
+      return session;
+    })
+  );
+
+  // Fetch facilities data to resolve room names
+  const { data: facilities } = await supabase
+    .from('facilities')
+    .select('id, name, data');
+
+  // Add room information to sessions
+  const sessionsWithRooms = sessionsWithTA.map(session => {
+    if (session.location_id && facilities) {
+      // Find the facility that contains this room
+      for (const facility of facilities) {
+        if (facility.data?.rooms) {
+          const room = facility.data.rooms.find((r: any) => r.id === session.location_id);
+          if (room) {
+            return {
+              ...session,
+              location: {
+                facility_name: facility.name,
+                room_name: room.name,
+                room_id: room.id
+              }
+            };
+          }
+        }
+      }
+    }
+    return session;
+  });
+
   return res.status(200).json({
     success: true,
-    data,
+    data: sessionsWithRooms,
     message: 'Lấy danh sách sessions thành công'
   });
 }

@@ -7,7 +7,7 @@ import AttendanceForm from '../components/AttendanceForm';
 import FinanceForm from '../components/FinanceForm';
 import TaskForm from '../components/TaskForm';
 import StudentEnrollmentForm from '../components/StudentEnrollmentForm';
-import LessonForm from '../components/LessonForm';
+import MainSessionForm from '../components/MainSessionForm';
 
 type TabType = 'facilities' | 'classes' | 'employees' | 'students' | 'enrollments' | 'attendance' | 'finances' | 'tasks' | 'schedule' | 'api-test';
 
@@ -192,7 +192,7 @@ export default function TestDashboard() {
 
   // Classes management state
   const [showClassForm, setShowClassForm] = useState(false);
-  const [showLessonForm, setShowLessonForm] = useState(false);
+  const [showMainSessionForm, setShowMainSessionForm] = useState(false);
   const [selectedClassForLesson, setSelectedClassForLesson] = useState<string | null>(null);
   const [classes, setClasses] = useState<Class[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -919,7 +919,7 @@ export default function TestDashboard() {
             </div>
 
             {selectedClassForLesson ? (
-              <LessonForm 
+              <MainSessionForm 
                 classId={selectedClassForLesson}
                 onSubmit={(data: any) => {
                   console.log('Lesson form submitted for class:', selectedClassForLesson, data);
