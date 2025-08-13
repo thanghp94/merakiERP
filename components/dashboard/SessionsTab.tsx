@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AttendanceModal from './AttendanceModal';
+import TeacherFeedbackModal from './TeacherFeedbackModal';
+import ClassCheckInModal from './ClassCheckInModal';
 
 interface Session {
   id: string;
@@ -61,6 +63,9 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
   const [mainSessionGroups, setMainSessionGroups] = useState<MainSessionGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
+  const [attendanceStatus, setAttendanceStatus] = useState<{ [key: string]: boolean }>({});
+  const [feedbackStatus, setFeedbackStatus] = useState<{ [key: string]: boolean }>({});
+  const [checkInStatus, setCheckInStatus] = useState<{ [key: string]: 'none' | 'teacher_only' | 'both_confirmed' }>({});
   const [attendanceModal, setAttendanceModal] = useState<{
     isOpen: boolean;
     sessionId: string;
@@ -69,6 +74,34 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
       time: string;
       className: string;
       classId?: string;
+    };
+  }>({
+    isOpen: false,
+    sessionId: '',
+    sessionInfo: undefined
+  });
+  const [feedbackModal, setFeedbackModal] = useState<{
+    isOpen: boolean;
+    sessionId: string;
+    sessionInfo?: {
+      lessonName: string;
+      time: string;
+      className: string;
+      teacherName: string;
+    };
+  }>({
+    isOpen: false,
+    sessionId: '',
+    sessionInfo: undefined
+  });
+  const [checkInModal, setCheckInModal] = useState<{
+    isOpen: boolean;
+    sessionId: string;
+    sessionInfo?: {
+      lessonName: string;
+      time: string;
+      className: string;
+      teacherName: string;
     };
   }>({
     isOpen: false,
@@ -87,11 +120,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  useEffect(() => {
-    fetchSessions();
-  }, [selectedDate]);
-
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/sessions?start_date=${selectedDate}&end_date=${selectedDate}`);
@@ -101,6 +130,12 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
         const sessionsData = result.data || [];
         setSessions(sessionsData);
         groupSessionsByMainSession(sessionsData);
+        // Fetch attendance status for all main sessions
+        await fetchAttendanceStatus(sessionsData);
+        // Fetch teacher feedback status for all sessions
+        await fetchTeacherFeedbackStatus(sessionsData);
+        // Fetch check-in status for all sessions
+        await fetchCheckInStatus(sessionsData);
       } else {
         console.error('API returned error:', result.message);
       }
@@ -109,9 +144,125 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [selectedDate]);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
+
+  const fetchAttendanceStatus = async (sessionsData: Session[]) => {
+    try {
+      // Get unique main session IDs
+      const mainSessionIds = Array.from(new Set(sessionsData.map(session => session.main_session_id)));
+      
+      const attendanceStatusMap: { [key: string]: boolean } = {};
+      
+      // Check attendance for each main session
+      await Promise.all(
+        mainSessionIds.map(async (mainSessionId) => {
+          if (mainSessionId) {
+            try {
+              const response = await fetch(`/api/attendance?main_session_id=${mainSessionId}&limit=1`);
+              const result = await response.json();
+              
+              if (result.success) {
+                // If there are any attendance records, mark as true
+                attendanceStatusMap[mainSessionId] = result.data && result.data.length > 0;
+              } else {
+                attendanceStatusMap[mainSessionId] = false;
+              }
+            } catch (error) {
+              console.error(`Error fetching attendance for main session ${mainSessionId}:`, error);
+              attendanceStatusMap[mainSessionId] = false;
+            }
+          }
+        })
+      );
+      
+      setAttendanceStatus(attendanceStatusMap);
+    } catch (error) {
+      console.error('Error fetching attendance status:', error);
+    }
   };
 
-  const groupSessionsByMainSession = (sessionsData: Session[]) => {
+  const fetchTeacherFeedbackStatus = async (sessionsData: Session[]) => {
+    try {
+      const feedbackStatusMap: { [key: string]: boolean } = {};
+      
+      // Check teacher feedback for each session
+      await Promise.all(
+        sessionsData.map(async (session) => {
+          if (session.id) {
+            try {
+              const response = await fetch(`/api/sessions/${session.id}`);
+              const result = await response.json();
+              
+              if (result.success && result.data?.data?.teacher_feedback) {
+                // Check if teacher feedback exists and has meaningful data
+                const feedback = result.data.data.teacher_feedback;
+                const hasRatings = Object.values(feedback).some((value: any) => 
+                  typeof value === 'number' && value > 0
+                );
+                const hasGeneralFeedback = feedback.general_feedback && feedback.general_feedback.trim().length > 0;
+                
+                feedbackStatusMap[session.id] = hasRatings || hasGeneralFeedback;
+              } else {
+                feedbackStatusMap[session.id] = false;
+              }
+            } catch (error) {
+              console.error(`Error fetching teacher feedback for session ${session.id}:`, error);
+              feedbackStatusMap[session.id] = false;
+            }
+          }
+        })
+      );
+      
+      setFeedbackStatus(feedbackStatusMap);
+    } catch (error) {
+      console.error('Error fetching teacher feedback status:', error);
+    }
+  };
+
+  const fetchCheckInStatus = async (sessionsData: Session[]) => {
+    try {
+      const checkInStatusMap: { [key: string]: 'none' | 'teacher_only' | 'both_confirmed' } = {};
+      
+      // Check teacher check-in for each session
+      await Promise.all(
+        sessionsData.map(async (session) => {
+          if (session.id) {
+            try {
+              const response = await fetch(`/api/sessions/${session.id}`);
+              const result = await response.json();
+              
+              if (result.success && result.data?.data?.teacher_checkin) {
+                // Check if teacher check-in exists and is completed
+                const checkin = result.data.data.teacher_checkin;
+                if (checkin.is_completed === true && checkin.staff_confirmed === true) {
+                  checkInStatusMap[session.id] = 'both_confirmed';
+                } else if (checkin.is_completed === true) {
+                  checkInStatusMap[session.id] = 'teacher_only';
+                } else {
+                  checkInStatusMap[session.id] = 'none';
+                }
+              } else {
+                checkInStatusMap[session.id] = 'none';
+              }
+            } catch (error) {
+              console.error(`Error fetching teacher check-in for session ${session.id}:`, error);
+              checkInStatusMap[session.id] = 'none';
+            }
+          }
+        })
+      );
+      
+      setCheckInStatus(checkInStatusMap);
+    } catch (error) {
+      console.error('Error fetching teacher check-in status:', error);
+    }
+  };
+
+  const groupSessionsByMainSession = useCallback((sessionsData: Session[]) => {
     const groups: { [key: string]: MainSessionGroup } = {};
 
     sessionsData.forEach(session => {
@@ -141,7 +292,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
     });
 
     setMainSessionGroups(Object.values(groups));
-  };
+  }, []);
 
   const formatTime = (timeString: string) => {
     return new Date(timeString).toLocaleTimeString('vi-VN', {
@@ -162,12 +313,103 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
     }
   };
 
-  const handleTeacherFeedback = (sessionId: string, teacherId: string) => {
-    // TODO: Implement teacher feedback functionality
-    alert(`Mở form nhận xét cho session ${sessionId} - teacher ${teacherId}`);
+  const handleTeacherFeedback = (session: Session) => {
+    const subjectName = session.data?.subject_name || '';
+    const lessonName = subjectName || `${session.subject_type} ${session.main_session_id}`;
+    const className = session.main_sessions?.classes?.class_name || session.data?.class_name || 'Unknown Class';
+    const teacherName = session.teacher?.full_name || 'Unknown Teacher';
+    
+    setFeedbackModal({
+      isOpen: true,
+      sessionId: session.id,
+      sessionInfo: {
+        lessonName,
+        time: `${formatTime(session.start_time)} - ${formatTime(session.end_time)}`,
+        className,
+        teacherName
+      }
+    });
   };
 
-  const handleAttendance = (session: Session) => {
+  const closeFeedbackModal = () => {
+    setFeedbackModal({
+      isOpen: false,
+      sessionId: '',
+      sessionInfo: undefined
+    });
+    // Refresh teacher feedback status after modal closes
+    if (sessions.length > 0) {
+      fetchTeacherFeedbackStatus(sessions);
+    }
+  };
+
+  const handleClassCheckIn = (session: Session) => {
+    const subjectName = session.data?.subject_name || '';
+    const lessonName = subjectName || `${session.subject_type} ${session.main_session_id}`;
+    const className = session.main_sessions?.classes?.class_name || session.data?.class_name || 'Unknown Class';
+    const teacherName = session.teacher?.full_name || 'Unknown Teacher';
+    
+    setCheckInModal({
+      isOpen: true,
+      sessionId: session.id,
+      sessionInfo: {
+        lessonName,
+        time: `${formatTime(session.start_time)} - ${formatTime(session.end_time)}`,
+        className,
+        teacherName
+      }
+    });
+  };
+
+  const closeCheckInModal = () => {
+    setCheckInModal({
+      isOpen: false,
+      sessionId: '',
+      sessionInfo: undefined
+    });
+    // Refresh check-in status after modal closes
+    if (sessions.length > 0) {
+      fetchCheckInStatus(sessions);
+    }
+  };
+
+  const getTeacherFeedbackButtonProps = (session: Session) => {
+    const hasFeedback = feedbackStatus[session.id] || false;
+    
+    if (hasFeedback) {
+      return {
+        text: 'Xem nhận xét',
+        className: 'px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded text-xs font-medium transition-colors',
+        onClick: () => handleTeacherFeedback(session)
+      };
+    } else {
+      return {
+        text: 'Nhận xét',
+        className: 'px-3 py-1 bg-white bg-opacity-70 hover:bg-opacity-90 rounded text-xs font-medium transition-colors',
+        onClick: () => handleTeacherFeedback(session)
+      };
+    }
+  };
+
+  const getAttendanceButtonProps = (session: Session) => {
+    const hasAttendance = attendanceStatus[session.main_session_id] || false;
+    
+    if (hasAttendance) {
+      return {
+        text: 'Xem điểm danh',
+        className: 'px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded text-xs font-medium transition-colors',
+        onClick: () => handleViewAttendance(session)
+      };
+    } else {
+      return {
+        text: 'Điểm danh',
+        className: 'px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded text-xs font-medium transition-colors',
+        onClick: () => handleCreateAttendance(session)
+      };
+    }
+  };
+
+  const handleCreateAttendance = (session: Session) => {
     const subjectName = session.data?.subject_name || '';
     const lessonName = subjectName || `${session.subject_type} ${session.main_session_id}`;
     const className = session.main_sessions?.classes?.class_name || session.data?.class_name || 'Unknown Class';
@@ -187,21 +429,49 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
     });
   };
 
+  const handleViewAttendance = (session: Session) => {
+    const subjectName = session.data?.subject_name || '';
+    const lessonName = subjectName || `${session.subject_type} ${session.main_session_id}`;
+    const className = session.main_sessions?.classes?.class_name || session.data?.class_name || 'Unknown Class';
+    
+    // Get the class_id from the main session or session data
+    const classId = session.main_sessions?.class_id || session.main_sessions?.classes?.id || '';
+    
+    // Open the attendance modal in view mode (same modal, but with existing data)
+    setAttendanceModal({
+      isOpen: true,
+      sessionId: session.id,
+      sessionInfo: {
+        lessonName,
+        time: `${formatTime(session.start_time)} - ${formatTime(session.end_time)}`,
+        className,
+        classId
+      }
+    });
+  };
+
   const closeAttendanceModal = () => {
     setAttendanceModal({
       isOpen: false,
       sessionId: '',
       sessionInfo: undefined
     });
+    // Refresh attendance status after modal closes
+    if (sessions.length > 0) {
+      fetchAttendanceStatus(sessions);
+    }
   };
 
-  const renderSessionCard = (session: Session) => {
+  const renderSessionCard = (session: Session, isInGroup: boolean = false, isLastInGroup: boolean = false) => {
     // Extract lesson part without class name (e.g., "U3 L3 GS12" -> "U3 L3")
     const subjectName = session.data?.subject_name || '';
     const lessonName = subjectName.replace(/\s+GS\d+$/, '') || `${session.subject_type} ${session.main_session_id}`;
     
+    // Use smaller margin between sessions within a group, no margin for last session
+    const marginClass = isInGroup ? (isLastInGroup ? 'mb-0' : 'mb-1') : 'mb-2';
+    
     return (
-      <div key={session.id} className={`p-2 rounded-lg mb-2 ${getSessionColor(session)}`}>
+      <div key={session.id} className={`p-2 rounded-lg ${marginClass} ${getSessionColor(session)}`}>
         <div className="flex items-center gap-2 mb-1">
           <h4 className="font-semibold text-lg">
             {lessonName}
@@ -238,41 +508,88 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleAttendance(session)}
-              className="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded text-xs font-medium transition-colors"
-            >
-              Điểm danh
-            </button>
-            {session.teacher && (
-              <button
-                onClick={() => handleTeacherFeedback(session.id, session.teacher_id)}
-                className="px-3 py-1 bg-white bg-opacity-70 hover:bg-opacity-90 rounded text-xs font-medium transition-colors"
-              >
-                Nhận xét
-              </button>
-            )}
+            {(() => {
+              const status = checkInStatus[session.id] || 'none';
+              let buttonClass = '';
+              let title = '';
+              
+              switch (status) {
+                case 'both_confirmed':
+                  buttonClass = 'bg-blue-100 hover:bg-blue-200 text-blue-800';
+                  title = 'Both confirmed - View times';
+                  break;
+                case 'teacher_only':
+                  buttonClass = 'bg-orange-100 hover:bg-orange-200 text-orange-800';
+                  title = 'Teacher checked in - Staff confirmation needed';
+                  break;
+                default:
+                  buttonClass = 'bg-gray-100 hover:bg-gray-200 text-gray-800';
+                  title = 'Class check-in';
+                  break;
+              }
+              
+              return (
+                <button
+                  onClick={() => handleClassCheckIn(session)}
+                  className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1 ${buttonClass}`}
+                  title={title}
+                >
+                  🕐
+                </button>
+              );
+            })()}
+            {(() => {
+              const buttonProps = getAttendanceButtonProps(session);
+              return (
+                <button
+                  onClick={buttonProps.onClick}
+                  className={buttonProps.className}
+                >
+                  {buttonProps.text}
+                </button>
+              );
+            })()}
+            {session.teacher && (() => {
+              const buttonProps = getTeacherFeedbackButtonProps(session);
+              return (
+                <button
+                  onClick={buttonProps.onClick}
+                  className={buttonProps.className}
+                >
+                  {buttonProps.text}
+                </button>
+              );
+            })()}
           </div>
         </div>
       </div>
     );
   };
 
-  const renderMainSessionGroup = (group: MainSessionGroup) => (
-    <div key={`${group.main_session_id}-${group.class_id}`} className="mb-6">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {/* Group Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-4">
-          <h3 className="font-bold text-lg">{group.class_name}</h3>
-        </div>
-        
-        {/* Sessions */}
-        <div className="p-4">
-          {group.sessions.map(session => renderSessionCard(session))}
+  const renderMainSessionGroup = (group: MainSessionGroup) => {
+    // Show blue header only when there are 2 or more sessions (TSI and REP)
+    const shouldShowHeader = group.sessions.length >= 2;
+    
+    return (
+      <div key={`${group.main_session_id}-${group.class_id}`} className={shouldShowHeader ? "mb-3" : "mb-1"}>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {/* Group Header - only show when there are multiple sessions */}
+          {shouldShowHeader && (
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-4">
+              <h3 className="font-bold text-lg">{group.class_name}</h3>
+            </div>
+          )}
+          
+          {/* Sessions */}
+          <div className={shouldShowHeader ? "p-1" : "p-1"}>
+            {group.sessions.map((session, index) => 
+              renderSessionCard(session, shouldShowHeader, index === group.sessions.length - 1)
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderDesktopView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -375,6 +692,22 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
         onClose={closeAttendanceModal}
         sessionId={attendanceModal.sessionId}
         sessionInfo={attendanceModal.sessionInfo}
+      />
+
+      {/* Teacher Feedback Modal */}
+      <TeacherFeedbackModal
+        isOpen={feedbackModal.isOpen}
+        onClose={closeFeedbackModal}
+        sessionId={feedbackModal.sessionId}
+        sessionInfo={feedbackModal.sessionInfo}
+      />
+
+      {/* Class Check-in Modal */}
+      <ClassCheckInModal
+        isOpen={checkInModal.isOpen}
+        onClose={closeCheckInModal}
+        sessionId={checkInModal.sessionId}
+        sessionInfo={checkInModal.sessionInfo}
       />
     </div>
   );

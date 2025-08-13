@@ -28,59 +28,93 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getAttendance(req: NextApiRequest, res: NextApiResponse) {
-  const { main_session_id, enrollment_id, status, date, limit = 50, offset = 0 } = req.query;
+  const { main_session_id, enrollment_id, student_id, status, date, limit = 50, offset = 0 } = req.query;
 
-  let query = supabase
+  // First get attendance records
+  let attendanceQuery = supabase
     .from('attendance')
-    .select(`
-      *,
-      enrollments (
-        id,
-        students (
-          id,
-          full_name,
-          email
-        )
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (main_session_id) {
-    query = query.eq('main_session_id', main_session_id);
+    attendanceQuery = attendanceQuery.eq('main_session_id', main_session_id);
   }
 
   if (enrollment_id) {
-    query = query.eq('enrollment_id', enrollment_id);
+    attendanceQuery = attendanceQuery.eq('enrollment_id', enrollment_id);
   }
 
   if (status) {
-    query = query.eq('status', status);
+    attendanceQuery = attendanceQuery.eq('status', status);
   }
 
   if (limit) {
-    query = query.limit(parseInt(limit as string));
+    attendanceQuery = attendanceQuery.limit(parseInt(limit as string));
   }
 
   if (offset) {
-    query = query.range(
+    attendanceQuery = attendanceQuery.range(
       parseInt(offset as string), 
       parseInt(offset as string) + parseInt(limit as string) - 1
     );
   }
 
-  const { data, error } = await query;
+  const { data: attendanceRecords, error: attendanceError } = await attendanceQuery;
 
-  if (error) {
-    console.error('Supabase error:', error);
+  if (attendanceError) {
+    console.error('Supabase error:', attendanceError);
     return res.status(500).json({ 
       success: false, 
       message: 'Không thể lấy danh sách điểm danh' 
     });
   }
 
+  // Now enrich the data with related information
+  const enrichedData = [];
+  
+  for (const record of attendanceRecords || []) {
+    // Get enrollment data
+    const { data: enrollment } = await supabase
+      .from('enrollments')
+      .select(`
+        id,
+        students (
+          id,
+          full_name,
+          email
+        ),
+        classes (
+          id,
+          class_name,
+          data,
+          facilities (
+            id,
+            name
+          )
+        )
+      `)
+      .eq('id', record.enrollment_id)
+      .single();
+
+    // Get main session data
+    const { data: mainSession } = await supabase
+      .from('main_sessions')
+      .select('main_session_id, main_session_name, scheduled_date, lesson_id, data')
+      .eq('main_session_id', record.main_session_id)
+      .single();
+
+    enrichedData.push({
+      ...record,
+      enrollments: enrollment,
+      main_sessions: mainSession
+    });
+  }
+
+  const attendanceData = enrichedData;
+
   return res.status(200).json({
     success: true,
-    data,
+    data: attendanceData,
     message: 'Lấy danh sách điểm danh thành công'
   });
 }

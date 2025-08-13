@@ -31,6 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       id: data.user.id,
       email: data.user.email,
       role: data.user.user_metadata?.role || 'student',
+      full_name: data.user.user_metadata?.full_name || null,
     };
 
     // Sign JWT token

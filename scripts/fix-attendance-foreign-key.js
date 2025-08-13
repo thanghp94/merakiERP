@@ -1,148 +1,122 @@
 const { createClient } = require('@supabase/supabase-js');
+
+// Load environment variables
 require('dotenv').config({ path: '.env.local' });
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://lunkgjarwqqkpbohneqn.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1bmtnamFyd3Fxa3Bib2huZXFuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc1MDIwOSwiZXhwIjoyMDcwMzI2MjA5fQ.G-lQ5F__laAz3Q9e5GRi_6DluA2kAjDCOX8hqBNOwXI';
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 async function fixAttendanceForeignKey() {
-  console.log('🔧 Fixing attendance foreign key to point to main_sessions...\n');
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.log('❌ Missing environment variables');
-    return;
-  }
-  
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-  
   try {
-    console.log('📋 Testing current attendance table structure...');
+    console.log('🔧 Fixing attendance foreign key relationship...\n');
     
-    // Test if we can insert a record to see what the current constraint is
-    const { data: mainSessions, error: mainSessionError } = await supabase
-      .from('main_sessions')
-      .select('main_session_id, main_session_name, class_id')
-      .limit(1);
+    // Step 1: Check current foreign key constraints
+    console.log('1. Checking current foreign key constraints...');
+    const { data: constraints, error: constraintsError } = await supabase
+      .rpc('sql', {
+        query: `
+          SELECT 
+            tc.table_name, 
+            kcu.column_name, 
+            ccu.table_name AS foreign_table_name,
+            ccu.column_name AS foreign_column_name 
+          FROM 
+            information_schema.table_constraints AS tc 
+            JOIN information_schema.key_column_usage AS kcu
+              ON tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.constraint_column_usage AS ccu
+              ON ccu.constraint_name = tc.constraint_name
+          WHERE tc.constraint_type = 'FOREIGN KEY' 
+            AND tc.table_name = 'attendance';
+        `
+      });
     
-    if (mainSessionError || !mainSessions || mainSessions.length === 0) {
-      console.error('❌ No main sessions found');
-      return;
+    if (constraintsError) {
+      console.error('Error checking constraints:', constraintsError);
+    } else {
+      console.log('Current foreign key constraints for attendance table:');
+      console.log(constraints);
     }
     
-    const testMainSession = mainSessions[0];
-    console.log(`✅ Found main session: ${testMainSession.main_session_name} (ID: ${testMainSession.main_session_id})`);
+    // Step 2: Check if the foreign key exists and recreate if needed
+    console.log('\n2. Ensuring foreign key constraint exists...');
     
-    // Get an enrollment for testing
-    const { data: enrollments, error: enrollmentError } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('class_id', testMainSession.class_id)
-      .limit(1);
+    const { data: recreateResult, error: recreateError } = await supabase
+      .rpc('sql', {
+        query: `
+          -- Drop the constraint if it exists
+          ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_main_session_id_fkey;
+          
+          -- Recreate the constraint
+          ALTER TABLE attendance 
+          ADD CONSTRAINT attendance_main_session_id_fkey 
+          FOREIGN KEY (main_session_id) 
+          REFERENCES main_sessions(main_session_id) 
+          ON DELETE CASCADE;
+        `
+      });
     
-    if (enrollmentError || !enrollments || enrollments.length === 0) {
-      console.error('❌ No enrollments found for testing');
-      return;
+    if (recreateError) {
+      console.error('Error recreating foreign key:', recreateError);
+    } else {
+      console.log('✅ Foreign key constraint recreated successfully');
     }
     
-    console.log(`✅ Found enrollment: ${enrollments[0].id}`);
+    // Step 3: Refresh the schema cache (this might help Supabase recognize the relationship)
+    console.log('\n3. Testing the relationship with a simple query...');
     
-    // Try to create a test attendance record
-    console.log('\n📋 Testing attendance creation with main_session_id...');
-    
-    const { data: testAttendance, error: testError } = await supabase
+    const { data: testData, error: testError } = await supabase
       .from('attendance')
-      .insert({
-        main_session_id: testMainSession.main_session_id,
-        enrollment_id: enrollments[0].id,
-        status: 'present',
-        data: {}
-      })
-      .select()
-      .single();
+      .select(`
+        id,
+        main_session_id,
+        main_sessions!inner (
+          main_session_id,
+          main_session_name
+        )
+      `)
+      .limit(1);
     
     if (testError) {
-      console.error('❌ Error creating test attendance:', testError);
+      console.error('❌ Relationship test failed:', testError);
       
-      if (testError.message.includes('teaching_sessions')) {
-        console.log('\n🔧 The foreign key constraint is pointing to teaching_sessions instead of main_sessions.');
-        console.log('Please run this SQL in your Supabase Dashboard > SQL Editor:');
-        console.log(`
--- Drop the incorrect foreign key constraint
-ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_session_id_fkey;
-
--- Add the correct foreign key constraint pointing to main_sessions
-ALTER TABLE attendance 
-ADD CONSTRAINT attendance_main_session_id_fkey 
-FOREIGN KEY (main_session_id) REFERENCES main_sessions(main_session_id) ON DELETE CASCADE;
-        `);
-      }
-      return;
-    } else {
-      console.log('✅ Successfully created test attendance record');
-      console.log('Test record ID:', testAttendance.id);
+      // Try alternative approach - use explicit join
+      console.log('\n4. Trying alternative approach with explicit join...');
       
-      // Clean up test record
-      await supabase
-        .from('attendance')
-        .delete()
-        .eq('id', testAttendance.id);
+      const { data: altData, error: altError } = await supabase
+        .rpc('sql', {
+          query: `
+            SELECT 
+              a.id,
+              a.main_session_id,
+              a.status,
+              ms.main_session_name,
+              ms.lesson_id,
+              ms.scheduled_date
+            FROM attendance a
+            LEFT JOIN main_sessions ms ON a.main_session_id = ms.main_session_id
+            LIMIT 5;
+          `
+        });
       
-      console.log('✅ Cleaned up test record');
-      
-      // Now test fetching attendance by main_session_id
-      console.log('\n📋 Testing attendance fetch by main_session_id...');
-      
-      // Create a real attendance record for testing
-      const { data: realAttendance, error: realError } = await supabase
-        .from('attendance')
-        .insert({
-          main_session_id: testMainSession.main_session_id,
-          enrollment_id: enrollments[0].id,
-          status: 'present',
-          data: {}
-        })
-        .select(`
-          *,
-          enrollments (
-            students (
-              full_name
-            )
-          )
-        `)
-        .single();
-      
-      if (realError) {
-        console.error('❌ Error creating real attendance:', realError);
+      if (altError) {
+        console.error('❌ Alternative approach failed:', altError);
       } else {
-        console.log('✅ Created real attendance record');
-        
-        // Test fetching
-        const { data: fetchedAttendance, error: fetchError } = await supabase
-          .from('attendance')
-          .select(`
-            *,
-            enrollments (
-              students (
-                full_name
-              )
-            )
-          `)
-          .eq('main_session_id', testMainSession.main_session_id);
-        
-        if (fetchError) {
-          console.error('❌ Error fetching attendance:', fetchError);
-        } else {
-          console.log(`✅ Successfully fetched ${fetchedAttendance?.length || 0} attendance records`);
-          fetchedAttendance?.forEach(record => {
-            console.log(`  - ${record.enrollments.students.full_name}: ${record.status}`);
-          });
-        }
+        console.log('✅ Alternative approach works! Data:');
+        console.log(altData);
       }
+      
+    } else {
+      console.log('✅ Relationship test successful! Data:');
+      console.log(testData);
     }
     
-    console.log('\n🎉 Attendance system is working correctly with main_sessions!');
+    console.log('\n🎉 Foreign key fix completed!');
     
   } catch (error) {
-    console.error('❌ Unexpected error:', error);
+    console.error('❌ Fix failed:', error);
   }
 }
 

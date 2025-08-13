@@ -1,4 +1,4 @@
-export type TabType = 'facilities' | 'classes' | 'employees' | 'students' | 'sessions' | 'attendance' | 'finances' | 'tasks' | 'schedule' | 'api-test';
+export type TabType = 'personal' | 'facilities' | 'classes' | 'employees' | 'students' | 'sessions' | 'attendance' | 'finances' | 'tasks' | 'schedule' | 'admissions' | 'api-test';
 
 export interface ApiTestResult {
   endpoint: string;
@@ -14,6 +14,7 @@ export interface Class {
   facility_id: string;
   status: string;
   start_date: string;
+  current_unit?: string; // Add the dedicated current_unit column
   created_at: string;
   data: {
     program_type?: string;
@@ -172,4 +173,29 @@ export interface Task {
     id: string;
     class_name: string;
   };
+}
+
+export interface Admission {
+  id: string;
+  status: 'pending' | 'fanpage_inquiry' | 'zalo_consultation' | 'trial_class' | 'enrolled' | 'follow_up' | 'rejected';
+  application_date: string;
+  data?: {
+    source?: string;
+    notes?: string;
+    trial_date?: string;
+    follow_up_date?: string;
+    interested_program?: string;
+    budget?: number;
+    urgency?: 'low' | 'medium' | 'high';
+    zalo_id?: string;
+    facebook_profile?: string;
+    referral_source?: string;
+  };
+  created_at: string;
+  updated_at: string;
+  student_name: string;
+  phone: string;
+  email?: string;
+  parent_name?: string;
+  location?: string;
 }

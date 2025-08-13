@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import EmployeeForm from '../EmployeeForm';
+import WorkScheduleModal from './WorkScheduleModal';
 import { Employee } from './types';
 import { formatDate, getStatusBadge } from './utils';
 
@@ -18,6 +19,27 @@ export default function EmployeesTab({
   isLoadingEmployees,
   handleFormSubmit
 }: EmployeesTabProps) {
+  const [workScheduleModal, setWorkScheduleModal] = useState<{
+    isOpen: boolean;
+    employee: Employee | null;
+  }>({
+    isOpen: false,
+    employee: null
+  });
+
+  const handleOpenWorkSchedule = (employee: Employee) => {
+    setWorkScheduleModal({
+      isOpen: true,
+      employee
+    });
+  };
+
+  const handleCloseWorkSchedule = () => {
+    setWorkScheduleModal({
+      isOpen: false,
+      employee: null
+    });
+  };
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -83,6 +105,9 @@ export default function EmployeesTab({
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Trạng thái
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thao tác
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -124,6 +149,15 @@ export default function EmployeesTab({
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(employee.status)}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => handleOpenWorkSchedule(employee)}
+                            className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors flex items-center gap-1"
+                          >
+                            <span>📅</span>
+                            Lịch làm việc
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -133,6 +167,14 @@ export default function EmployeesTab({
           </div>
         </div>
       )}
+
+      {/* Work Schedule Modal */}
+      <WorkScheduleModal
+        isOpen={workScheduleModal.isOpen}
+        onClose={handleCloseWorkSchedule}
+        employee={workScheduleModal.employee}
+        canEdit={true} // Admin can edit work schedules
+      />
     </div>
   );
 }

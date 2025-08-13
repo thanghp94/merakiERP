@@ -72,6 +72,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
+      // Get class information to extract current unit
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('current_unit, data')
+        .eq('id', class_id)
+        .single();
+
+      if (classError) {
+        console.error('Error fetching class data:', classError);
+        return res.status(500).json({
+          success: false,
+          message: 'Lỗi khi lấy thông tin lớp học',
+          error: classError.message
+        });
+      }
+
       // Extract lesson number from main_session_name if not provided directly
       let extractedLessonId = lesson_number;
       if (!extractedLessonId && main_session_name) {
@@ -79,6 +95,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const lessonMatch = main_session_name.match(/\.L(\d+)/);
         if (lessonMatch) {
           extractedLessonId = `L${lessonMatch[1]}`;
+        }
+      }
+
+      // Combine current unit with lesson number to create full lesson ID
+      let fullLessonId = extractedLessonId;
+      if (extractedLessonId && classData) {
+        // Get current unit from either the dedicated column or JSONB data
+        const currentUnit = classData.current_unit || classData.data?.unit;
+        if (currentUnit) {
+          // Create full format like "U10.L1"
+          fullLessonId = `${currentUnit}.${extractedLessonId}`;
         }
       }
 
@@ -117,7 +144,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           main_session_name,
           scheduled_date,
           class_id,
-          lesson_id: extractedLessonId, // Save the lesson number to lesson_id field
+          lesson_id: fullLessonId, // Save the full lesson ID (e.g., "U10.L1") to lesson_id field
           data: dataField
         })
         .select()

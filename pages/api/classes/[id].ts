@@ -64,7 +64,7 @@ async function getClass(id: string, res: NextApiResponse) {
 }
 
 async function updateClass(id: string, req: NextApiRequest, res: NextApiResponse) {
-  const { class_name, facility_id, status, start_date, data } = req.body;
+  const { class_name, facility_id, status, start_date, data, current_unit } = req.body;
 
   const updateData: any = {};
   if (class_name !== undefined) updateData.class_name = class_name;
@@ -72,6 +72,7 @@ async function updateClass(id: string, req: NextApiRequest, res: NextApiResponse
   if (status !== undefined) updateData.status = status;
   if (start_date !== undefined) updateData.start_date = start_date;
   if (data !== undefined) updateData.data = data;
+  if (current_unit !== undefined) updateData.current_unit = current_unit;
 
   if (Object.keys(updateData).length === 0) {
     return res.status(400).json({ 

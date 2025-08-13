@@ -35,10 +35,12 @@ export const getNextSuggestedUnit = (currentUnit: string): string => {
 };
 
 export const tabs = [
+  { id: 'personal', label: 'Cá nhân', icon: '👤' },
   { id: 'facilities', label: 'Cơ sở', icon: '🏢' },
   { id: 'classes', label: 'Lớp học', icon: '📚' },
   { id: 'employees', label: 'Nhân viên', icon: '👥' },
-  { id: 'students', label: 'Học sinh', icon: '🎓' },
+  { id: 'students', label: 'Học sinh', icon: '👤' },
+  { id: 'admissions', label: 'Tuyển sinh', icon: '🎓' },
   { id: 'sessions', label: 'Buổi học', icon: '🎯' },
   { id: 'attendance', label: 'Điểm danh', icon: '✅' },
   { id: 'finances', label: 'Tài chính', icon: '💰' },

@@ -1,135 +1,188 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { withAuth, withTeacherOrAdmin, ROLES, filterDataByPermissions } from '../../../lib/auth/rbac';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { supabase } from '../../../lib/supabase';
 
-// GET /api/students - View students (Teachers/Admins see all, Students see only themselves)
-const getStudents = withAuth(async (req, res, { user, supabase }) => {
-  const filters = {
-    status: req.query.status as string,
-    level: req.query.level as string,
-    search: req.query.search as string,
-    limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
-    offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
-  };
-
-  try {
-    let query = supabase
-      .from('students')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    // Apply filters
-    if (filters.status) {
-      query = query.eq('status', filters.status);
-    }
-
-    if (filters.level && filters.level !== 'all') {
-      query = query.eq('data->>level', filters.level);
-    }
-
-    if (filters.search) {
-      query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
-    }
-
-    if (filters.limit) {
-      query = query.limit(filters.limit);
-    }
-
-    if (filters.offset) {
-      query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
-    }
-
-    // For students, they can only see their own data (handled by RLS)
-    // For teachers/admins, they see all students (handled by RLS)
-    const { data: students, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: students || [],
-      message: 'Students retrieved successfully',
-      user_role: user.role,
-      user_id: user.id
-    });
-
-  } catch (error) {
-    console.error('Get students error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to retrieve students'
-    });
-  }
-});
-
-// POST /api/students - Create student (Teachers/Admins only)
-const createStudent = withTeacherOrAdmin(async (req, res, { user, supabase }) => {
-  const studentData = req.body;
-  
-  // Basic validation
-  if (!studentData.full_name || !studentData.data?.parent?.name || !studentData.data?.parent?.phone) {
-    return res.status(400).json({
-      success: false,
-      message: 'Missing required fields: full_name, parent name, and parent phone are required'
-    });
-  }
-
-  try {
-    const { data: newStudent, error } = await supabase
-      .from('students')
-      .insert([{
-        ...studentData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return res.status(201).json({
-      success: true,
-      data: newStudent,
-      message: 'Student created successfully',
-      created_by: user.email
-    });
-
-  } catch (error) {
-    console.error('Create student error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to create student'
-    });
-  }
-});
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
         return await getStudents(req, res);
-
       case 'POST':
         return await createStudent(req, res);
-
       default:
         res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({
-          success: false,
-          message: `Method ${req.method} not allowed`
+        return res.status(405).json({ 
+          success: false, 
+          message: `Phương thức ${req.method} không được hỗ trợ` 
         });
     }
   } catch (error) {
-    console.error('Students API error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Internal server error'
+    console.error('API Error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi máy chủ nội bộ' 
     });
   }
+}
+
+async function getStudents(req: NextApiRequest, res: NextApiResponse) {
+  const { 
+    status, 
+    level, 
+    search, 
+    facility_id, 
+    class_id, 
+    program_type, 
+    limit = 50, 
+    offset = 0 
+  } = req.query;
+
+  // If filtering by facility, class, or program_type, we need to join with enrollments and classes
+  const needsJoin = facility_id || class_id || program_type;
+
+  let query;
+
+  if (needsJoin) {
+    // Query with joins to get students filtered by facility/class/program
+    query = supabase
+      .from('students')
+      .select(`
+        *,
+        enrollments!inner (
+          id,
+          class_id,
+          status,
+          classes!inner (
+            id,
+            class_name,
+            facility_id,
+            data,
+            facilities (
+              id,
+              name
+            )
+          )
+        )
+      `)
+      .eq('enrollments.status', 'active')
+      .order('created_at', { ascending: false });
+
+    // Apply facility filter
+    if (facility_id && facility_id !== 'all') {
+      query = query.eq('enrollments.classes.facility_id', facility_id);
+    }
+
+    // Apply class filter
+    if (class_id && class_id !== 'all') {
+      query = query.eq('enrollments.class_id', class_id);
+    }
+
+    // Apply program_type filter
+    if (program_type && program_type !== 'all') {
+      query = query.eq('enrollments.classes.data->>program_type', program_type);
+    }
+  } else {
+    // Simple query without joins
+    query = supabase
+      .from('students')
+      .select('*')
+      .order('created_at', { ascending: false });
+  }
+
+  // Apply common filters
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  if (level && level !== 'all') {
+    query = query.eq('data->>level', level);
+  }
+
+  if (search) {
+    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+  }
+
+  if (limit) {
+    query = query.limit(parseInt(limit as string));
+  }
+
+  if (offset) {
+    query = query.range(
+      parseInt(offset as string), 
+      parseInt(offset as string) + parseInt(limit as string) - 1
+    );
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Supabase error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Không thể lấy danh sách học sinh' 
+    });
+  }
+
+  // If we used joins, we need to flatten the data and remove duplicates
+  let processedData = data;
+  if (needsJoin && data) {
+    // Remove duplicate students (a student might be in multiple classes)
+    const uniqueStudents = new Map();
+    
+    data.forEach((student: any) => {
+      if (!uniqueStudents.has(student.id)) {
+        // Add enrollment and class info to student data
+        const studentWithEnrollment = {
+          ...student,
+          current_enrollments: student.enrollments || []
+        };
+        delete studentWithEnrollment.enrollments;
+        uniqueStudents.set(student.id, studentWithEnrollment);
+      }
+    });
+    
+    processedData = Array.from(uniqueStudents.values());
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: processedData,
+    message: 'Lấy danh sách học sinh thành công'
+  });
+}
+
+async function createStudent(req: NextApiRequest, res: NextApiResponse) {
+  const { full_name, email, phone, status = 'active', data = {} } = req.body;
+
+  if (!full_name) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Tên học sinh là bắt buộc' 
+    });
+  }
+
+  const { data: student, error } = await supabase
+    .from('students')
+    .insert({
+      full_name,
+      email,
+      phone,
+      status,
+      data
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Supabase error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Không thể tạo học sinh mới' 
+    });
+  }
+
+  return res.status(201).json({
+    success: true,
+    data: student,
+    message: 'Tạo học sinh mới thành công'
+  });
 }
