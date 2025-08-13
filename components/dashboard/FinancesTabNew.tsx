@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { formatDate, getStatusBadge } from './utils';
+import { formatDate, getStatusBadge } from './shared/utils';
 import FinanceFormNew from './FinanceFormNew';
 
 interface FinanceItem {

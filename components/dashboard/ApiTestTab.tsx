@@ -1,5 +1,5 @@
 import React from 'react';
-import { ApiTestResult } from './types';
+import { ApiTestResult } from './shared/types';
 
 interface ApiTestTabProps {
   apiResults: ApiTestResult[];

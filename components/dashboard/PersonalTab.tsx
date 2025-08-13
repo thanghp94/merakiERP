@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { formatDate } from './utils';
+import { formatDate } from './shared/utils';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { getCurrentLocation, getLocationStatusMessage } from '../../lib/utils/gps';
-import WorkScheduleModal from './WorkScheduleModal';
+import WorkScheduleModal from './employees/WorkScheduleModal';
 
 interface ClockRecord {
   id: string;

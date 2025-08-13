@@ -23,13 +23,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      // Transform the data to match expected format
-      const transformedData = data?.map((item: any) => ({
-        value: item.value,
-        label_en: item.label_en,
-        label_vi: item.label_vi,
-        type: item.type
-      })) || [];
+      // Transform the data to match expected format with type classification
+      const transformedData = data?.map((item: any) => {
+        // Classify categories as income or expense based on their value
+        const incomeCategories = ['tuition_fee', 'registration_fee', 'material_fee', 'exam_fee', 'private_lesson_fee', 'other_income'];
+        const type = incomeCategories.includes(item.value) ? 'income' : 'expense';
+        
+        return {
+          value: item.value,
+          label_en: item.label_en,
+          label_vi: item.label_vi,
+          type: type
+        };
+      }) || [];
 
       res.status(200).json({
         success: true,

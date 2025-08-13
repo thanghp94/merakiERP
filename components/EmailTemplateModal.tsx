@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { emailTemplates, EmailTemplate, getTemplatesByCategory } from '../lib/email-templates';
-import { Admission } from './dashboard/types';
+import { Admission } from './dashboard/shared/types';
 
 interface EmailTemplateModalProps {
   isOpen: boolean;

@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import StudentEnrollmentForm from '../components/StudentEnrollmentForm';
+import StudentEnrollmentForm from '../components/dashboard/students/StudentEnrollmentForm';
 import { useState } from 'react';
 import Link from 'next/link';
 

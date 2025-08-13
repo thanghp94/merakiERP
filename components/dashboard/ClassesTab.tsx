@@ -1,8 +1,8 @@
 import React from 'react';
 import ClassForm from '../ClassForm';
-import MainSessionForm from '../MainSessionForm';
-import { Class, Facility, ProgramType, UnitOption } from './types';
-import { formatDate, getStatusBadge, getNextSuggestedUnit } from './utils';
+import MainSessionForm from './sessions/MainSessionForm';
+import { Class, Facility, ProgramType, UnitOption } from './shared/types';
+import { formatDate, getStatusBadge, getNextSuggestedUnit } from './shared/utils';
 
 interface ClassesTabProps {
   showClassForm: boolean;

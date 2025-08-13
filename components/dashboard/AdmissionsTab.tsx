@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Admission } from './types';
+import { Admission } from './shared/types';
 import AdmissionsKanban from './AdmissionsKanban';
 
 interface AdmissionsTabProps {

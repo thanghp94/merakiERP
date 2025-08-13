@@ -1,7 +1,7 @@
 import React from 'react';
 import FinanceForm from '../FinanceForm';
-import { Finance } from './types';
-import { formatDate, getStatusBadge } from './utils';
+import { Finance } from './shared/types';
+import { formatDate, getStatusBadge } from './shared/utils';
 
 interface FinancesTabProps {
   showFinanceForm: boolean;

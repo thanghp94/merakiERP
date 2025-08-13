@@ -1,7 +1,7 @@
 import React from 'react';
 import AttendanceForm from '../AttendanceForm';
-import { Attendance } from './types';
-import { formatDate, getStatusBadge } from './utils';
+import { Attendance } from './shared/types';
+import { formatDate, getStatusBadge } from './shared/utils';
 
 interface AttendanceTabProps {
   showAttendanceForm: boolean;

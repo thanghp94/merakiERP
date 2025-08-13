@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import StudentEnrollmentForm from '../StudentEnrollmentForm';
-import { Student } from './types';
-import { getStatusBadge } from './utils';
+import StudentEnrollmentForm from './StudentEnrollmentForm';
+import { Student } from '../shared/types';
+import { getStatusBadge } from '../shared/utils';
 
 interface StudentsTabProps {
   showStudentForm: boolean;
@@ -57,6 +57,21 @@ export default function StudentsTab({
     classFilter: 'all',
     availableUnits: [],
     availableClasses: []
+  });
+
+  // Invoice drawer state
+  const [invoiceDrawer, setInvoiceDrawer] = useState<{
+    isOpen: boolean;
+    studentId: string;
+    studentName: string;
+    invoices: any[];
+    isLoading: boolean;
+  }>({
+    isOpen: false,
+    studentId: '',
+    studentName: '',
+    invoices: [],
+    isLoading: false
   });
 
   // Fetch filter options and initial students on component mount
@@ -161,6 +176,55 @@ export default function StudentsTab({
       return filterOptions.classes;
     }
     return filterOptions.classes.filter(cls => cls.facility_id === filters.facility_id);
+  };
+
+  // Handle invoice drawer
+  const handleViewInvoices = async (student: Student) => {
+    setInvoiceDrawer({
+      isOpen: true,
+      studentId: student.id,
+      studentName: student.full_name,
+      invoices: [],
+      isLoading: true
+    });
+
+    try {
+      const response = await fetch(`/api/invoices?student_id=${student.id}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log(`📄 Found ${result.data.length} invoices for student ${student.full_name}`);
+        setInvoiceDrawer(prev => ({
+          ...prev,
+          invoices: result.data || [],
+          isLoading: false
+        }));
+      } else {
+        console.error('Failed to fetch invoices:', result.message);
+        setInvoiceDrawer(prev => ({
+          ...prev,
+          invoices: [],
+          isLoading: false
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      setInvoiceDrawer(prev => ({
+        ...prev,
+        invoices: [],
+        isLoading: false
+      }));
+    }
+  };
+
+  const closeInvoiceDrawer = () => {
+    setInvoiceDrawer({
+      isOpen: false,
+      studentId: '',
+      studentName: '',
+      invoices: [],
+      isLoading: false
+    });
   };
 
   // Handle attendance drawer
@@ -615,12 +679,20 @@ export default function StudentsTab({
                           {getStatusBadge(student.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => handleViewAttendance(student)}
-                            className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                          >
-                            📋 Xem điểm danh
-                          </button>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleViewAttendance(student)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              📋 Xem điểm danh
+                            </button>
+                            <button
+                              onClick={() => handleViewInvoices(student)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            >
+                              💰 Xem hóa đơn
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -765,6 +837,164 @@ export default function StudentsTab({
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Drawer */}
+      {invoiceDrawer.isOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={closeInvoiceDrawer}></div>
+          <div className="absolute left-0 top-0 h-full w-1/2 bg-white shadow-xl">
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Hóa đơn - {invoiceDrawer.studentName}
+                  </h3>
+                  <button
+                    onClick={closeInvoiceDrawer}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto">
+                {invoiceDrawer.isLoading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-gray-600">Đang tải...</span>
+                  </div>
+                ) : invoiceDrawer.invoices.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-400 mb-4">
+                      <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-2">Chưa có hóa đơn</h4>
+                    <p className="text-gray-600">Học sinh này chưa có hóa đơn nào.</p>
+                  </div>
+                ) : (
+                  <div className="p-6 space-y-6">
+                    {invoiceDrawer.invoices.map((invoice: any) => (
+                      <div key={invoice.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        {/* Invoice Header */}
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h4 className="text-lg font-semibold text-gray-900">
+                              {invoice.invoice_number || `Hóa đơn #${invoice.id.slice(-6)}`}
+                            </h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {invoice.description}
+                            </p>
+                            <div className="flex items-center space-x-4 mt-2">
+                              <span className="text-sm text-gray-500">
+                                Ngày: {formatDate(invoice.invoice_date || invoice.created_at)}
+                              </span>
+                              {invoice.due_date && (
+                                <span className="text-sm text-gray-500">
+                                  Hạn: {formatDate(invoice.due_date)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-gray-900">
+                              {invoice.total_amount?.toLocaleString('vi-VN') || '0'} ₫
+                            </div>
+                            <div className="mt-1">
+                              {getStatusBadge(invoice.status)}
+                            </div>
+                            {invoice.is_income !== undefined && (
+                              <div className={`text-xs mt-1 ${invoice.is_income ? 'text-green-600' : 'text-red-600'}`}>
+                                {invoice.is_income ? 'Thu' : 'Chi'}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Invoice Items */}
+                        {invoice.invoice_items && invoice.invoice_items.length > 0 && (
+                          <div>
+                            <h5 className="text-sm font-medium text-gray-700 mb-3">Chi tiết các khoản:</h5>
+                            <div className="space-y-2">
+                              {invoice.invoice_items.map((item: any, index: number) => (
+                                <div key={item.id || index} className="bg-white rounded p-3 border border-gray-100">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-gray-900">
+                                        {item.item_name}
+                                      </div>
+                                      {item.item_description && (
+                                        <div className="text-sm text-gray-600 mt-1">
+                                          {item.item_description}
+                                        </div>
+                                      )}
+                                      <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                                        <span>Danh mục: {item.category}</span>
+                                        <span>SL: {item.quantity || 1}</span>
+                                        <span>Đơn giá: {item.unit_price?.toLocaleString('vi-VN')} ₫</span>
+                                      </div>
+                                    </div>
+                                    <div className="text-right ml-4">
+                                      <div className="font-semibold text-gray-900">
+                                        {item.total_amount?.toLocaleString('vi-VN') || 
+                                         ((item.quantity || 1) * (item.unit_price || 0)).toLocaleString('vi-VN')} ₫
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Payment Info */}
+                        {(invoice.paid_amount > 0 || invoice.remaining_amount > 0) && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              {invoice.paid_amount > 0 && (
+                                <div>
+                                  <span className="text-gray-600">Đã thanh toán:</span>
+                                  <span className="ml-2 font-medium text-green-600">
+                                    {invoice.paid_amount.toLocaleString('vi-VN')} ₫
+                                  </span>
+                                </div>
+                              )}
+                              {invoice.remaining_amount > 0 && (
+                                <div>
+                                  <span className="text-gray-600">Còn lại:</span>
+                                  <span className="ml-2 font-medium text-orange-600">
+                                    {invoice.remaining_amount.toLocaleString('vi-VN')} ₫
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        {invoice.notes && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="text-sm">
+                              <span className="text-gray-600">Ghi chú:</span>
+                              <p className="mt-1 text-gray-800">{invoice.notes}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

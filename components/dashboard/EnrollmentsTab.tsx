@@ -1,7 +1,7 @@
 import React from 'react';
 import EnrollmentForm from '../EnrollmentForm';
-import { Enrollment } from './types';
-import { formatDate, getStatusBadge } from './utils';
+import { Enrollment } from './shared/types';
+import { formatDate, getStatusBadge } from './shared/utils';
 
 interface EnrollmentsTabProps {
   showEnrollmentForm: boolean;

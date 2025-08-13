@@ -1,7 +1,7 @@
 import React from 'react';
 import TaskForm from '../TaskForm';
-import { Task } from './types';
-import { formatDate, getStatusBadge } from './utils';
+import { Task } from './shared/types';
+import { formatDate, getStatusBadge } from './shared/utils';
 
 interface TasksTabProps {
   showTaskForm: boolean;

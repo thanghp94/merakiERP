@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TabType, ApiTestResult, Class, Facility, ProgramType, UnitOption, Employee, Student, Enrollment, Attendance, Finance, Task } from '../components/dashboard/types';
-import { tabs, getNextSuggestedUnit } from '../components/dashboard/utils';
+import { TabType, ApiTestResult, Class, Facility, ProgramType, UnitOption, Employee, Student, Enrollment, Attendance, Finance, Task } from '../components/dashboard/shared/types';
+import { tabs, getNextSuggestedUnit } from '../components/dashboard/shared/utils';
 import FacilitiesTab from '../components/dashboard/FacilitiesTab';
 import ClassesTab from '../components/dashboard/ClassesTab';
 import EmployeesTab from '../components/dashboard/EmployeesTab';

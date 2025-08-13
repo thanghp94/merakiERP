@@ -1,4 +1,19 @@
-export type TabType = 'personal' | 'facilities' | 'classes' | 'employees' | 'students' | 'sessions' | 'attendance' | 'finances' | 'tasks' | 'schedule' | 'admissions' | 'api-test';
+export type TabType = 'personal' | 'facilities' | 'classes' | 'employees' | 'students' | 'sessions' | 'attendance' | 'finances' | 'payroll' | 'tasks' | 'schedule' | 'admissions' | 'api-test';
+
+export type MainTabType = 'vanhanh' | 'khachhang' | 'taichinh' | 'hcns';
+
+export interface SubTab {
+  id: TabType;
+  label: string;
+  icon: string;
+}
+
+export interface MainTab {
+  id: MainTabType;
+  label: string;
+  icon: string;
+  subtabs: SubTab[];
+}
 
 export interface ApiTestResult {
   endpoint: string;

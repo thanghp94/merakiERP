@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import EmployeeForm from '../EmployeeForm';
+import EmployeeForm from './EmployeeForm';
 import WorkScheduleModal from './WorkScheduleModal';
-import { Employee } from './types';
-import { formatDate, getStatusBadge } from './utils';
+import { Employee } from '../shared/types';
+import { formatDate, getStatusBadge } from '../shared/utils';
 
 interface EmployeesTabProps {
   showEmployeeForm: boolean;

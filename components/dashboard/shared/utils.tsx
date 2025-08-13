@@ -44,6 +44,7 @@ export const tabs = [
   { id: 'sessions', label: 'Buổi học', icon: '🎯' },
   { id: 'attendance', label: 'Điểm danh', icon: '✅' },
   { id: 'finances', label: 'Tài chính', icon: '💰' },
+  { id: 'payroll', label: 'Lương', icon: '💵' },
   { id: 'tasks', label: 'Bài tập', icon: '📋' },
   { id: 'schedule', label: 'Lịch học', icon: '📅' },
   { id: 'api-test', label: 'Test API', icon: '🔧' }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Admission } from './types';
+import { Admission } from './shared/types';
 import EmailTemplateModal from '../EmailTemplateModal';
 
 interface AdmissionsKanbanProps {

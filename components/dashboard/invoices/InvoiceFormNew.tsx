@@ -119,10 +119,59 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
       if (employeesData.success) setEmployees(employeesData.data || []);
       if (facilitiesData.success) setFacilities(facilitiesData.data || []);
       if (classesData.success) setClasses(classesData.data || []);
-      if (categoriesData.success) setCategories(categoriesData.data || []);
-      if (paymentMethodsData.success) setPaymentMethods(paymentMethodsData.data || []);
+      
+      // Set categories with fallback
+      if (categoriesData.success && categoriesData.data?.length > 0) {
+        setCategories(categoriesData.data);
+      } else {
+        // Fallback categories
+        const fallbackCategories = [
+          // Income categories
+          { value: 'tuition_fee', label_vi: 'Học phí', type: 'income' },
+          { value: 'registration_fee', label_vi: 'Phí đăng ký', type: 'income' },
+          { value: 'material_fee', label_vi: 'Phí tài liệu', type: 'income' },
+          { value: 'exam_fee', label_vi: 'Phí thi', type: 'income' },
+          { value: 'other_income', label_vi: 'Thu nhập khác', type: 'income' },
+          // Expense categories
+          { value: 'staff_salary', label_vi: 'Lương nhân viên', type: 'expense' },
+          { value: 'teacher_bonus', label_vi: 'Thưởng giáo viên', type: 'expense' },
+          { value: 'facility_rent', label_vi: 'Tiền thuê mặt bằng', type: 'expense' },
+          { value: 'utilities', label_vi: 'Tiện ích', type: 'expense' },
+          { value: 'equipment', label_vi: 'Thiết bị', type: 'expense' },
+          { value: 'marketing', label_vi: 'Marketing', type: 'expense' },
+          { value: 'other_expense', label_vi: 'Chi phí khác', type: 'expense' }
+        ];
+        setCategories(fallbackCategories);
+      }
+      
+      // Set payment methods with fallback
+      if (paymentMethodsData.success && paymentMethodsData.data?.length > 0) {
+        setPaymentMethods(paymentMethodsData.data);
+      } else {
+        // Fallback payment methods
+        const fallbackPaymentMethods = [
+          { value: 'cash', label_vi: 'Tiền mặt' },
+          { value: 'bank_transfer', label_vi: 'Chuyển khoản' },
+          { value: 'credit_card', label_vi: 'Thẻ tín dụng' },
+          { value: 'online_payment', label_vi: 'Thanh toán online' }
+        ];
+        setPaymentMethods(fallbackPaymentMethods);
+      }
     } catch (error) {
       console.error('Error loading form data:', error);
+      // Set fallback data in case of error
+      const fallbackCategories = [
+        { value: 'tuition_fee', label_vi: 'Học phí', type: 'income' },
+        { value: 'registration_fee', label_vi: 'Phí đăng ký', type: 'income' },
+        { value: 'staff_salary', label_vi: 'Lương nhân viên', type: 'expense' },
+        { value: 'other_expense', label_vi: 'Chi phí khác', type: 'expense' }
+      ];
+      const fallbackPaymentMethods = [
+        { value: 'cash', label_vi: 'Tiền mặt' },
+        { value: 'bank_transfer', label_vi: 'Chuyển khoản' }
+      ];
+      setCategories(fallbackCategories);
+      setPaymentMethods(fallbackPaymentMethods);
     }
   };
 
@@ -229,61 +278,49 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
   const availableCategories = formData.is_income ? incomeCategories : expenseCategories;
 
   return (
-    <div className="bg-white rounded-lg shadow-md">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">
-          {initialData ? 'Chỉnh sửa hóa đơn' : 'Tạo hóa đơn mới'}
-        </h3>
-      </div>
-
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        {/* Invoice Type Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Loại hóa đơn *
-          </label>
-          <div className="flex space-x-4">
-            <button
-              type="button"
-              onClick={() => handleIncomeTypeChange(true)}
-              className={`flex-1 p-4 border-2 rounded-lg text-center transition-colors ${
-                formData.is_income
-                  ? 'border-green-500 bg-green-50 text-green-700'
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              <div className="text-2xl mb-2">📈</div>
-              <div className="font-medium">Hóa đơn thu</div>
-              <div className="text-sm text-gray-600">Học phí, phí dịch vụ</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleIncomeTypeChange(false)}
-              className={`flex-1 p-4 border-2 rounded-lg text-center transition-colors ${
-                !formData.is_income
-                  ? 'border-red-500 bg-red-50 text-red-700'
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              <div className="text-2xl mb-2">📉</div>
-              <div className="font-medium">Hóa đơn chi</div>
-              <div className="text-sm text-gray-600">Lương, chi phí vận hành</div>
-            </button>
+    <form onSubmit={handleSubmit} className="space-y-2">
+        {/* Invoice Type Selection - Compact */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Loại hóa đơn *
+            </label>
+            <div className="flex space-x-1">
+              <button
+                type="button"
+                onClick={() => handleIncomeTypeChange(true)}
+                className={`flex-1 px-2 py-1 border rounded text-xs transition-colors ${
+                  formData.is_income
+                    ? 'border-green-500 bg-green-50 text-green-700'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                Thu
+              </button>
+              <button
+                type="button"
+                onClick={() => handleIncomeTypeChange(false)}
+                className={`flex-1 px-2 py-1 border rounded text-xs transition-colors ${
+                  !formData.is_income
+                    ? 'border-red-500 bg-red-50 text-red-700'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                Chi
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Invoice Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Loại hóa đơn chi tiết *
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Loại chi tiết *
             </label>
             <select
               name="invoice_type"
               value={formData.invoice_type}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               {formData.is_income ? (
                 <>
@@ -299,19 +336,50 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
             </select>
           </div>
 
+          {/* Invoice Date */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Ngày hóa đơn *
+            </label>
+            <input
+              type="date"
+              name="invoice_date"
+              value={formData.invoice_date}
+              onChange={handleInputChange}
+              required
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Due Date */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Hạn thanh toán
+            </label>
+            <input
+              type="date"
+              name="due_date"
+              value={formData.due_date}
+              onChange={handleInputChange}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
           {/* Related Entity Selection */}
           {formData.is_income && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Học sinh
               </label>
               <select
                 name="student_id"
                 value={formData.student_id}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                <option value="">Chọn học sinh (tùy chọn)</option>
+                <option value="">Chọn học sinh</option>
                 {students.map(student => (
                   <option key={student.id} value={student.id}>
                     {student.full_name}
@@ -323,16 +391,16 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
 
           {!formData.is_income && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Nhân viên
               </label>
               <select
                 name="employee_id"
                 value={formData.employee_id}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                <option value="">Chọn nhân viên (tùy chọn)</option>
+                <option value="">Chọn nhân viên</option>
                 {employees.map(employee => (
                   <option key={employee.id} value={employee.id}>
                     {employee.full_name}
@@ -344,16 +412,16 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
 
           {/* Class Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Lớp học
             </label>
             <select
               name="class_id"
               value={formData.class_id}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <option value="">Chọn lớp (tùy chọn)</option>
+              <option value="">Chọn lớp</option>
               {classes.map(cls => (
                 <option key={cls.id} value={cls.id}>
                   {cls.class_name}
@@ -364,16 +432,16 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
 
           {/* Facility Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Cơ sở
             </label>
             <select
               name="facility_id"
               value={formData.facility_id}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <option value="">Chọn cơ sở (tùy chọn)</option>
+              <option value="">Chọn cơ sở</option>
               {facilities.map(facility => (
                 <option key={facility.id} value={facility.id}>
                   {facility.name}
@@ -382,166 +450,122 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
             </select>
           </div>
 
-          {/* Invoice Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ngày hóa đơn *
+          {/* Description */}
+          <div className="md:col-span-4">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Mô tả hóa đơn *
             </label>
             <input
-              type="date"
-              name="invoice_date"
-              value={formData.invoice_date}
+              type="text"
+              name="description"
+              value={formData.description}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Mô tả ngắn gọn về hóa đơn"
             />
           </div>
-
-          {/* Due Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Hạn thanh toán
-            </label>
-            <input
-              type="date"
-              name="due_date"
-              value={formData.due_date}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Mô tả hóa đơn *
-          </label>
-          <input
-            type="text"
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Mô tả ngắn gọn về hóa đơn"
-          />
         </div>
 
         {/* Invoice Items */}
-        <div className="border-t pt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-medium text-gray-900">Chi tiết hóa đơn</h4>
+        <div className="border-t pt-2">
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="text-sm font-medium text-gray-900">Chi tiết hóa đơn</h4>
             <button
               type="button"
               onClick={addItem}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-sm flex items-center space-x-1"
+              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs flex items-center space-x-1"
             >
-              <span>➕</span>
-              <span>Thêm mục</span>
+              <span>+</span>
+              <span>Thêm</span>
             </button>
           </div>
 
           {formData.items.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {formData.items.map((item, index) => (
-                <div key={index} className="bg-gray-50 p-4 rounded-lg border">
-                  <div className="flex justify-between items-start mb-3">
-                    <h5 className="font-medium text-gray-900">Mục {index + 1}</h5>
+                <div key={index} className="bg-gray-50 p-2 rounded border">
+                  <div className="flex justify-between items-start mb-1">
+                    <h5 className="text-xs font-medium text-gray-900">Mục {index + 1}</h5>
                     <button
                       type="button"
                       onClick={() => removeItem(index)}
-                      className="text-red-600 hover:text-red-800 text-sm"
+                      className="text-red-600 hover:text-red-800 text-xs"
                     >
-                      ✕ Xóa
+                      ✕
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
                     <div className="lg:col-span-2">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Tên mục *
-                      </label>
                       <input
                         type="text"
                         value={item.item_name}
                         onChange={(e) => updateItem(index, 'item_name', e.target.value)}
                         required
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        placeholder="VD: Học phí tháng 1"
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="Tên mục"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Danh mục *
-                      </label>
                       <select
                         value={item.category}
                         onChange={(e) => updateItem(index, 'category', e.target.value)}
                         required
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
-                        <option value="">Chọn danh mục</option>
+                        <option value="">Danh mục</option>
                         {availableCategories.map(category => (
                           <option key={category.value} value={category.value}>
-                            {category.label_vi}
+                            {category.label_vi || category.label}
                           </option>
                         ))}
                       </select>
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Số lượng
-                      </label>
                       <input
                         type="number"
                         value={item.quantity}
                         onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
                         min="0"
                         step="0.01"
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="SL"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Đơn giá
-                      </label>
                       <input
                         type="number"
                         value={item.unit_price}
                         onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
                         min="0"
                         step="1000"
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="Đơn giá"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Thành tiền
-                      </label>
                       <input
                         type="number"
                         value={item.total_amount}
                         readOnly
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100"
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs bg-gray-100"
+                        placeholder="Thành tiền"
                       />
                     </div>
                   </div>
                   
-                  <div className="mt-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Mô tả chi tiết
-                    </label>
+                  <div className="mt-1">
                     <input
                       type="text"
                       value={item.item_description}
                       onChange={(e) => updateItem(index, 'item_description', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      placeholder="Mô tả chi tiết về mục này..."
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="Mô tả chi tiết..."
                     />
                   </div>
                 </div>
@@ -551,14 +575,11 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
         </div>
 
         {/* Financial Summary */}
-        <div className="border-t pt-6">
-          <h4 className="text-lg font-medium text-gray-900 mb-4">Tổng kết tài chính</h4>
+        <div className="border-t pt-2">
+          <h4 className="text-sm font-medium text-gray-900 mb-2">Tổng kết</h4>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Thuế VAT (%)
-              </label>
               <input
                 type="number"
                 name="tax_rate"
@@ -567,14 +588,12 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
                 min="0"
                 max="100"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Thuế VAT (%)"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Giảm giá
-              </label>
               <input
                 type="number"
                 name="discount_amount"
@@ -582,13 +601,14 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
                 onChange={handleInputChange}
                 min="0"
                 step="1000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Giảm giá"
               />
             </div>
           </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-4">
-            <div className="space-y-2">
+          <div className="bg-blue-50 p-2 rounded border border-blue-200 mt-2">
+            <div className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <span>Tạm tính:</span>
                 <span>{formData.subtotal.toLocaleString('vi-VN')} ₫</span>
@@ -601,7 +621,7 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
                 <span>Giảm giá:</span>
                 <span>-{formData.discount_amount.toLocaleString('vi-VN')} ₫</span>
               </div>
-              <div className="flex justify-between items-center text-lg font-bold text-blue-900 border-t pt-2">
+              <div className="flex justify-between items-center text-sm font-bold text-blue-900 border-t pt-1">
                 <span>Tổng cộng:</span>
                 <span>{formData.total_amount.toLocaleString('vi-VN')} ₫</span>
               </div>
@@ -610,8 +630,8 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
         </div>
 
         {/* Payment Section */}
-        <div className="border-t pt-6">
-          <div className="flex items-center mb-4">
+        <div className="border-t pt-4">
+          <div className="flex items-center mb-3">
             <input
               type="checkbox"
               name="create_payment"
@@ -625,9 +645,9 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
           </div>
 
           {formData.create_payment && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-gray-50 p-3 rounded">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phương thức thanh toán *
                 </label>
                 <select
@@ -646,7 +666,7 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Số tiền thanh toán *
                 </label>
                 <input
@@ -663,7 +683,7 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ngày thanh toán *
                 </label>
                 <input
@@ -676,8 +696,8 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
                 />
               </div>
               
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Mã tham chiếu
                 </label>
                 <input
@@ -695,41 +715,40 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
 
         {/* Notes */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
             Ghi chú
           </label>
           <textarea
             name="notes"
             value={formData.notes}
             onChange={handleInputChange}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            rows={2}
+            className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="Ghi chú thêm về hóa đơn..."
           />
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-end space-x-3 pt-6 border-t">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            className="px-3 py-1 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded text-sm transition-colors"
           >
             Hủy
           </button>
           <button
             type="submit"
             disabled={isLoading || formData.items.length === 0}
-            className={`px-6 py-2 text-white rounded-md transition-colors ${
+            className={`px-4 py-1 text-white rounded text-sm transition-colors ${
               isLoading || formData.items.length === 0
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {isLoading ? 'Đang lưu...' : (initialData ? 'Cập nhật hóa đơn' : 'Tạo hóa đơn')}
+            {isLoading ? 'Đang lưu...' : (initialData ? 'Cập nhật' : 'Tạo hóa đơn')}
           </button>
         </div>
       </form>
-    </div>
   );
 }

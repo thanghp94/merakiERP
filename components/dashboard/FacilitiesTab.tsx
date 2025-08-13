@@ -1,7 +1,7 @@
 import React from 'react';
 import FacilityForm from '../FacilityForm';
-import { Facility } from './types';
-import { formatDate, getStatusBadge } from './utils';
+import { Facility } from './shared/types';
+import { formatDate, getStatusBadge } from './shared/utils';
 
 interface FacilitiesTabProps {
   showFacilityForm: boolean;

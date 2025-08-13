@@ -1,6 +1,6 @@
 import React from 'react';
-import { Class, UnitOption } from './types';
-import { getNextSuggestedUnit } from './utils';
+import { Class, UnitOption } from './shared/types';
+import { getNextSuggestedUnit } from './shared/utils';
 
 interface UnitTransitionModalProps {
   showModal: boolean;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Class, Student, Enrollment } from './types';
-import { formatDate, getStatusBadge } from './utils';
+import { Class, Student, Enrollment } from './shared/types';
+import { formatDate, getStatusBadge } from './shared/utils';
 
 interface ClassEnrollmentModalProps {
   showModal: boolean;

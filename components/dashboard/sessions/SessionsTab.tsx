@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import AttendanceModal from './AttendanceModal';
-import TeacherFeedbackModal from './TeacherFeedbackModal';
-import ClassCheckInModal from './ClassCheckInModal';
+import AttendanceModal from '../AttendanceModal';
+import TeacherFeedbackModal from '../TeacherFeedbackModal';
+import ClassCheckInModal from '../ClassCheckInModal';
 
 interface Session {
   id: string;
