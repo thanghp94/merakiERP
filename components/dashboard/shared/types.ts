@@ -56,6 +56,20 @@ export interface Facility {
   id: string;
   name: string;
   status: string;
+  type?: string;
+  created_at?: string;
+  data?: {
+    type?: string;
+    address?: string;
+    capacity?: number;
+    established?: string;
+    description?: string;
+    rooms?: Array<{
+      id: string;
+      name: string;
+      description?: string;
+    }>;
+  };
 }
 
 export interface ProgramType {
@@ -81,8 +95,13 @@ export interface Employee {
     address?: string;
     date_of_birth?: string;
     hire_date?: string;
-    salary?: number;
+    id_number?: string;
+    id_issue_date?: string;
+    id_expiry_date?: string;
+    avatar?: string;
+    experience?: string;
     qualifications?: string;
+    nationality?: string;
     notes?: string;
   };
 }

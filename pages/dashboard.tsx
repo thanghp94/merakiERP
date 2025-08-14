@@ -7,7 +7,7 @@ import { TabType, MainTabType, MainTab, SubTab, ApiTestResult, Class, Facility, 
 import { tabs, getNextSuggestedUnit } from '../components/dashboard/shared/utils';
 import { Button, Card, Badge } from '../components/ui';
 import PersonalTab from '../components/dashboard/PersonalTab';
-import FacilitiesTab from '../components/dashboard/FacilitiesTab';
+import { FacilitiesTabCrud } from '../components/dashboard/crud';
 import ClassesTab from '../components/dashboard/ClassesTab';
 import EmployeesTab from '../components/dashboard/employees/EmployeesTab';
 import StudentsTab from '../components/dashboard/students/StudentsTab';
@@ -583,40 +583,54 @@ export default function Dashboard() {
     
     try {
       let endpoint = '';
+      let method = 'POST';
+      
+      // Check if this is an edit operation (data has an id)
+      const isEdit = data.id;
+      
       switch (formType) {
         case 'Facility':
-          endpoint = '/api/facilities';
+          endpoint = isEdit ? `/api/facilities/${data.id}` : '/api/facilities';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Class':
-          endpoint = '/api/classes';
+          endpoint = isEdit ? `/api/classes/${data.id}` : '/api/classes';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Employee':
-          endpoint = '/api/employees';
+          endpoint = isEdit ? `/api/employees/${data.id}` : '/api/employees';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Student':
-          endpoint = '/api/students';
+          endpoint = isEdit ? `/api/students/${data.id}` : '/api/students';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Enrollment':
-          endpoint = '/api/enrollments';
+          endpoint = isEdit ? `/api/enrollments/${data.id}` : '/api/enrollments';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Attendance':
-          endpoint = '/api/attendance';
+          endpoint = isEdit ? `/api/attendance/${data.id}` : '/api/attendance';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Finance':
-          endpoint = '/api/finances';
+          endpoint = isEdit ? `/api/finances/${data.id}` : '/api/finances';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Task':
-          endpoint = '/api/tasks';
+          endpoint = isEdit ? `/api/tasks/${data.id}` : '/api/tasks';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Admission':
-          endpoint = '/api/admissions';
+          endpoint = isEdit ? `/api/admissions/${data.id}` : '/api/admissions';
+          method = isEdit ? 'PUT' : 'POST';
           break;
         default:
           throw new Error(`Unknown form type: ${formType}`);
       }
 
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -626,10 +640,11 @@ export default function Dashboard() {
       const result = await response.json();
 
       if (response.ok) {
-        alert(`${formType} đã được lưu thành công vào Supabase!`);
-        console.log(`${formType} saved successfully:`, result);
+        const action = isEdit ? 'cập nhật' : 'lưu';
+        alert(`${formType} đã được ${action} thành công!`);
+        console.log(`${formType} ${action}d successfully:`, result);
         
-        // Refresh lists when items are added
+        // Refresh lists when items are added/updated
         if (formType === 'Class') {
           setShowClassForm(false);
           fetchClasses();
@@ -661,7 +676,7 @@ export default function Dashboard() {
         
         const apiResult: ApiTestResult = {
           endpoint,
-          method: 'POST',
+          method,
           status: response.status,
           data: result,
         };
@@ -684,18 +699,47 @@ export default function Dashboard() {
     }
   };
 
+  // Facility CRUD handlers
+  const handleFacilityDelete = async (facility: Facility) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa cơ sở "${facility.name}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/facilities/${facility.id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert('Cơ sở đã được xóa thành công!');
+        fetchFacilitiesList(); // Refresh the list
+      } else {
+        throw new Error(result.message || 'Failed to delete facility');
+      }
+    } catch (error) {
+      console.error('Error deleting facility:', error);
+      alert(`Lỗi khi xóa cơ sở: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'personal':
         return <PersonalTab />;
       case 'facilities':
         return (
-          <FacilitiesTab
-            showFacilityForm={showFacilityForm}
-            setShowFacilityForm={setShowFacilityForm}
-            facilitiesList={facilitiesList}
-            isLoadingFacilitiesList={isLoadingFacilitiesList}
-            handleFormSubmit={handleFormSubmit}
+          <FacilitiesTabCrud
+            facilities={facilitiesList}
+            isLoading={isLoadingFacilitiesList}
+            onSubmit={handleFormSubmit}
+            onView={(facility) => {
+              console.log('View facility:', facility);
+              // TODO: Implement view modal
+              alert(`Xem chi tiết cơ sở: ${facility.name}`);
+            }}
+            onDelete={handleFacilityDelete}
           />
         );
       case 'classes':

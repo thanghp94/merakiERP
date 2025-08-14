@@ -8,6 +8,8 @@ export interface ActionButtonProps {
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   className?: string;
+  iconOnly?: boolean;
+  tooltip?: string;
 }
 
 export default function ActionButton({
@@ -17,13 +19,19 @@ export default function ActionButton({
   variant = 'primary',
   size = 'sm',
   disabled = false,
-  className = ''
+  className = '',
+  iconOnly = false,
+  tooltip
 }: ActionButtonProps) {
   const getButtonClass = () => {
-    const baseClass = "inline-flex items-center border border-transparent font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
+    const baseClass = "inline-flex items-center justify-center border border-transparent font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
     
-    // Size classes
-    const sizeClasses = {
+    // Size classes - different for icon-only vs with text
+    const sizeClasses = iconOnly ? {
+      sm: 'w-8 h-8 text-xs',
+      md: 'w-10 h-10 text-sm',
+      lg: 'w-12 h-12 text-base'
+    } : {
       sm: 'px-3 py-1 text-xs',
       md: 'px-4 py-2 text-sm',
       lg: 'px-6 py-3 text-base'
@@ -39,14 +47,25 @@ export default function ActionButton({
     return `${baseClass} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`;
   };
 
-  return (
+  const buttonContent = iconOnly ? (
+    <span className="flex items-center justify-center">{icon}</span>
+  ) : (
+    <>
+      {icon && <span className="mr-1">{icon}</span>}
+      {label}
+    </>
+  );
+
+  const button = (
     <button
       onClick={onClick}
       disabled={disabled}
       className={getButtonClass()}
+      title={tooltip || (iconOnly ? label : undefined)}
     >
-      {icon && <span className="mr-1">{icon}</span>}
-      {label}
+      {buttonContent}
     </button>
   );
+
+  return button;
 }

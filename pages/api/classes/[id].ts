@@ -110,6 +110,64 @@ async function updateClass(id: string, req: NextApiRequest, res: NextApiResponse
 }
 
 async function deleteClass(id: string, res: NextApiResponse) {
+  // First check if the class exists
+  const { data: existingClass, error: checkError } = await supabase
+    .from('classes')
+    .select('id, class_name')
+    .eq('id', id)
+    .single();
+
+  if (checkError) {
+    if (checkError.code === 'PGRST116') {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Không tìm thấy lớp học' 
+      });
+    }
+    console.error('Check class error:', checkError);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi khi kiểm tra lớp học' 
+    });
+  }
+
+  // Check for related records that would prevent deletion
+  const { data: enrollments, error: enrollmentError } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('class_id', id)
+    .limit(1);
+
+  if (enrollmentError) {
+    console.error('Check enrollments error:', enrollmentError);
+  }
+
+  const { data: sessions, error: sessionError } = await supabase
+    .from('main_sessions')
+    .select('id')
+    .eq('class_id', id)
+    .limit(1);
+
+  if (sessionError) {
+    console.error('Check sessions error:', sessionError);
+  }
+
+  // If there are related records, provide informative error
+  if (enrollments && enrollments.length > 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Không thể xóa lớp học này vì đã có học sinh đăng ký. Vui lòng xóa tất cả đăng ký trước khi xóa lớp học.' 
+    });
+  }
+
+  if (sessions && sessions.length > 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Không thể xóa lớp học này vì đã có buổi học được tạo. Vui lòng xóa tất cả buổi học trước khi xóa lớp học.' 
+    });
+  }
+
+  // Proceed with deletion
   const { error } = await supabase
     .from('classes')
     .delete()
@@ -117,6 +175,15 @@ async function deleteClass(id: string, res: NextApiResponse) {
 
   if (error) {
     console.error('Supabase error:', error);
+    
+    // Handle specific foreign key constraint errors
+    if (error.code === '23503') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Không thể xóa lớp học này vì có dữ liệu liên quan. Vui lòng xóa các dữ liệu liên quan trước.' 
+      });
+    }
+    
     return res.status(500).json({ 
       success: false, 
       message: 'Không thể xóa lớp học' 

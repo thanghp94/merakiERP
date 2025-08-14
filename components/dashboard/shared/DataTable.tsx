@@ -16,6 +16,8 @@ export interface TableAction<T = any> {
   onClick: (row: T) => void;
   variant?: 'primary' | 'secondary' | 'danger';
   show?: (row: T) => boolean;
+  iconOnly?: boolean;
+  tooltip?: string;
 }
 
 interface DataTableProps<T = any> {
@@ -30,6 +32,7 @@ interface DataTableProps<T = any> {
   };
   onRowClick?: (row: T) => void;
   className?: string;
+  actionColumnWidth?: string;
 }
 
 export default function DataTable<T = any>({
@@ -39,7 +42,8 @@ export default function DataTable<T = any>({
   isLoading = false,
   emptyState,
   onRowClick,
-  className = ''
+  className = '',
+  actionColumnWidth
 }: DataTableProps<T>) {
   const defaultEmptyState = {
     icon: (
@@ -99,7 +103,7 @@ export default function DataTable<T = any>({
                 </th>
               ))}
               {actions.length > 0 && (
-                <th className="px-6 py-3 text-left text-xs font-semibold text-orange-800 uppercase tracking-wider">
+                <th className={`px-6 py-3 text-center text-xs font-semibold text-orange-800 uppercase tracking-wider ${actionColumnWidth || 'w-32'}`}>
                   Thao tác
                 </th>
               )}
@@ -131,8 +135,11 @@ export default function DataTable<T = any>({
                   </td>
                 ))}
                 {actions.length > 0 && (
-                  <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
+                  <td 
+                    className={`px-6 py-2 whitespace-nowrap text-sm font-medium ${actionColumnWidth || 'w-32'}`}
+                    onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
+                  >
+                    <div className="flex space-x-1 justify-center">
                       {actions
                         .filter(action => !action.show || action.show(row))
                         .map((action, actionIndex) => (
@@ -141,6 +148,8 @@ export default function DataTable<T = any>({
                             label={action.label}
                             icon={action.icon}
                             variant={action.variant}
+                            iconOnly={action.iconOnly}
+                            tooltip={action.tooltip}
                             onClick={() => action.onClick(row)}
                           />
                         ))

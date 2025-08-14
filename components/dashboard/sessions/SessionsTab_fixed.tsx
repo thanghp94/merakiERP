@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AttendanceModal from '../AttendanceModal';
 import TeacherFeedbackModal from '../TeacherFeedbackModal';
 import ClassCheckInModal from '../ClassCheckInModal';
-import MediaUploadModal from '../MediaUploadModal_optimized';
+import MediaUploadModal from '../MediaUploadModal';
 
 interface Session {
   id: string;

@@ -4,6 +4,8 @@ export { default as FilterBar } from './FilterBar';
 export type { FilterConfig, FilterOption } from './FilterBar';
 export { default as DataTable } from './DataTable';
 export type { TableColumn, TableAction } from './DataTable';
+export { default as CrudTable } from './CrudTable';
+export type { CrudTableProps } from './CrudTable';
 export { default as ActionButton } from './ActionButton';
 export type { ActionButtonProps } from './ActionButton';
 export { default as FormModal, FormGrid, FormField } from './FormModal';
