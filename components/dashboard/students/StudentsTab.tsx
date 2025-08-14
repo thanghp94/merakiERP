@@ -5,11 +5,13 @@ import { Student } from '../shared/types';
 interface StudentsTabProps {
   showStudentForm: boolean;
   setShowStudentForm: (show: boolean) => void;
+  onViewStudent?: (student: Student) => void;
 }
 
 export default function StudentsTab({
   showStudentForm,
-  setShowStudentForm
+  setShowStudentForm,
+  onViewStudent
 }: StudentsTabProps): JSX.Element {
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
@@ -69,8 +71,11 @@ export default function StudentsTab({
   };
 
   const handleViewStudent = (student: Student) => {
-    // TODO: Implement view student details modal
-    console.log('View student:', student);
+    if (onViewStudent) {
+      onViewStudent(student);
+    } else {
+      console.log('View student:', student);
+    }
   };
 
   const handleEditStudent = async (student: Student) => {

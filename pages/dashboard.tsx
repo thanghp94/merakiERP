@@ -8,6 +8,9 @@ import { tabs, getNextSuggestedUnit } from '../components/dashboard/shared/utils
 import { Button, Card, Badge } from '../components/ui';
 import PersonalTab from '../components/dashboard/PersonalTab';
 import { FacilitiesTabCrud } from '../components/dashboard/crud';
+import FacilityDetailModal from '../components/dashboard/FacilityDetailModal';
+import EmployeeDetailModal from '../components/dashboard/EmployeeDetailModal';
+import StudentDetailModal from '../components/dashboard/StudentDetailModal';
 import ClassesTab from '../components/dashboard/ClassesTab';
 import EmployeesTab from '../components/dashboard/employees/EmployeesTab';
 import StudentsTab from '../components/dashboard/students/StudentsTab';
@@ -138,6 +141,14 @@ export default function Dashboard() {
   const [showAdmissionForm, setShowAdmissionForm] = useState(false);
   const [admissions, setAdmissions] = useState<Admission[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+
+  // Detail modal states
+  const [showFacilityDetail, setShowFacilityDetail] = useState(false);
+  const [selectedFacilityForDetail, setSelectedFacilityForDetail] = useState<Facility | null>(null);
+  const [showEmployeeDetail, setShowEmployeeDetail] = useState(false);
+  const [selectedEmployeeForDetail, setSelectedEmployeeForDetail] = useState<Employee | null>(null);
+  const [showStudentDetail, setShowStudentDetail] = useState(false);
+  const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<Student | null>(null);
 
   useEffect(() => {
     if (activeTab === 'classes') {
@@ -699,6 +710,22 @@ export default function Dashboard() {
     }
   };
 
+  // Detail view handlers
+  const handleFacilityView = (facility: Facility) => {
+    setSelectedFacilityForDetail(facility);
+    setShowFacilityDetail(true);
+  };
+
+  const handleEmployeeView = (employee: Employee) => {
+    setSelectedEmployeeForDetail(employee);
+    setShowEmployeeDetail(true);
+  };
+
+  const handleStudentView = (student: Student) => {
+    setSelectedStudentForDetail(student);
+    setShowStudentDetail(true);
+  };
+
   // Facility CRUD handlers
   const handleFacilityDelete = async (facility: Facility) => {
     if (!confirm(`Bạn có chắc chắn muốn xóa cơ sở "${facility.name}"?`)) {
@@ -734,11 +761,7 @@ export default function Dashboard() {
             facilities={facilitiesList}
             isLoading={isLoadingFacilitiesList}
             onSubmit={handleFormSubmit}
-            onView={(facility) => {
-              console.log('View facility:', facility);
-              // TODO: Implement view modal
-              alert(`Xem chi tiết cơ sở: ${facility.name}`);
-            }}
+            onView={handleFacilityView}
             onDelete={handleFacilityDelete}
           />
         );
@@ -775,6 +798,7 @@ export default function Dashboard() {
             employees={employees}
             isLoadingEmployees={isLoadingEmployees}
             handleFormSubmit={handleFormSubmit}
+            onViewEmployee={handleEmployeeView}
           />
         );
       case 'students':
@@ -782,6 +806,7 @@ export default function Dashboard() {
           <StudentsTab
             showStudentForm={showStudentForm}
             setShowStudentForm={setShowStudentForm}
+            onViewStudent={handleStudentView}
           />
         );
       case 'sessions':
@@ -1088,6 +1113,34 @@ export default function Dashboard() {
           onCancel={() => setShowAdmissionForm(false)}
         />
       )}
+
+      {/* Detail View Modals */}
+      <FacilityDetailModal
+        isOpen={showFacilityDetail}
+        onClose={() => {
+          setShowFacilityDetail(false);
+          setSelectedFacilityForDetail(null);
+        }}
+        facility={selectedFacilityForDetail}
+      />
+
+      <EmployeeDetailModal
+        isOpen={showEmployeeDetail}
+        onClose={() => {
+          setShowEmployeeDetail(false);
+          setSelectedEmployeeForDetail(null);
+        }}
+        employee={selectedEmployeeForDetail}
+      />
+
+      <StudentDetailModal
+        isOpen={showStudentDetail}
+        onClose={() => {
+          setShowStudentDetail(false);
+          setSelectedStudentForDetail(null);
+        }}
+        student={selectedStudentForDetail}
+      />
     </ProtectedRoute>
   );
 }

@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import ActionButton from './ActionButton';
+import { useEscapeKey } from '../../../lib/hooks/useEscapeKey';
 
 export interface FormModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ export interface FormModalProps {
   submitLabel?: string;
   cancelLabel?: string;
   isSubmitting?: boolean;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'near-full' | 'full';
 }
 
 export default function FormModal({
@@ -26,10 +27,17 @@ export default function FormModal({
   isSubmitting = false,
   maxWidth = '6xl'
 }: FormModalProps) {
+  // Add ESC key handler
+  useEscapeKey(() => {
+    if (!isSubmitting) {
+      handleCancel();
+    }
+  }, isOpen);
+
   if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !isSubmitting) {
       onClose();
     }
   };
@@ -61,9 +69,17 @@ export default function FormModal({
       '5xl': 'max-w-5xl',
       '6xl': 'max-w-6xl',
       '7xl': 'max-w-7xl',
+      'near-full': 'max-w-[95vw]',
       full: 'max-w-full'
     };
     return widthClasses[maxWidth];
+  };
+
+  const getModalHeight = () => {
+    if (maxWidth === 'near-full') {
+      return 'max-h-[95vh]';
+    }
+    return 'max-h-[90vh]';
   };
 
   return (
@@ -75,16 +91,16 @@ export default function FormModal({
       />
       
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className={`relative w-full ${getMaxWidthClass()} mx-4`}>
-          <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+      <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
+        <div className={`relative w-full ${getMaxWidthClass()} mx-2 sm:mx-4`}>
+          <div className={`bg-white rounded-lg shadow-xl overflow-hidden ${getModalHeight()} flex flex-col`}>
             {/* Header */}
-            <div className="bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200 px-6 py-4">
+            <div className="bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-orange-800">
+                <h2 className="text-base sm:text-lg font-semibold text-orange-800 truncate pr-4">
                   {title}
                 </h2>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
                   {/* Action Buttons */}
                   {onSubmit && (
                     <ActionButton
@@ -104,11 +120,12 @@ export default function FormModal({
                   />
                   {/* Close X Button */}
                   <button
-                    onClick={onClose}
+                    onClick={handleCancel}
                     disabled={isSubmitting}
                     className="p-1 rounded-md text-orange-600 hover:text-orange-800 hover:bg-orange-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Đóng (ESC)"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -116,12 +133,14 @@ export default function FormModal({
               </div>
             </div>
 
-            {/* Content */}
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="text-sm">
-                {children}
-              </div>
-            </form>
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6">
+                <div className="text-sm">
+                  {children}
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>

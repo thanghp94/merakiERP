@@ -9,6 +9,7 @@ interface EmployeesTabProps {
   employees: Employee[];
   isLoadingEmployees: boolean;
   handleFormSubmit: (data: any, formType: string) => void;
+  onViewEmployee?: (employee: Employee) => void;
 }
 
 export default function EmployeesTab({
@@ -16,7 +17,8 @@ export default function EmployeesTab({
   setShowEmployeeForm,
   employees,
   isLoadingEmployees,
-  handleFormSubmit
+  handleFormSubmit,
+  onViewEmployee
 }: EmployeesTabProps): JSX.Element {
   const [workScheduleModal, setWorkScheduleModal] = useState<{
     isOpen: boolean;
@@ -26,7 +28,7 @@ export default function EmployeesTab({
     employee: null
   });
 
-  const handleSubmit = async (data: any, formType: string) => {
+  const handleSubmit = async (data: any, formType: string): Promise<void> => {
     if (formType === 'RefreshEmployees') {
       // Just refresh the employees list - this would be handled by parent component
       return;
@@ -36,8 +38,11 @@ export default function EmployeesTab({
   };
 
   const handleViewEmployee = (employee: Employee) => {
-    // TODO: Implement view employee details modal
-    console.log('View employee:', employee);
+    if (onViewEmployee) {
+      onViewEmployee(employee);
+    } else {
+      console.log('View employee:', employee);
+    }
   };
 
   const handleEditEmployee = (employee: Employee) => {

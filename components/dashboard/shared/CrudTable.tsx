@@ -55,22 +55,13 @@ export default function CrudTable<T = any>({
   className = '',
   enableRowClick = true,
   actionColumnWidth = 'w-32'
-}: CrudTableProps<T>) {
+}: CrudTableProps<T>): JSX.Element {
   
   // Build standard CRUD actions
   const buildCrudActions = (): TableAction<T>[] => {
     const actions: TableAction<T>[] = [];
     
-    if (onView) {
-      actions.push({
-        label: 'Xem',
-        icon: '👁️',
-        onClick: onView,
-        variant: 'secondary',
-        iconOnly: true,
-        tooltip: 'Xem chi tiết'
-      });
-    }
+    // Removed eye icon since users can click on rows to view details
     
     if (onEdit) {
       actions.push({
@@ -110,8 +101,8 @@ export default function CrudTable<T = any>({
         <FilterBar
           filters={filters || {}}
           filterConfigs={filterConfigs}
-          onFilterChange={onFilterChange}
-          onClearFilters={onClearFilters}
+          onFilterChange={onFilterChange || (() => {})}
+          onClearFilters={onClearFilters || (() => {})}
           actionButton={onCreateClick ? {
             label: createButtonLabel,
             icon: '➕',

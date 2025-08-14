@@ -380,7 +380,7 @@ export default function FacilitiesTabCrud({
         submitLabel="Thêm mới"
         cancelLabel="Hủy"
         isSubmitting={form.isSubmitting}
-        maxWidth="6xl"
+        maxWidth="near-full"
       >
         {form.submitError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
@@ -537,7 +537,7 @@ export default function FacilitiesTabCrud({
         submitLabel="Cập nhật"
         cancelLabel="Hủy"
         isSubmitting={form.isSubmitting}
-        maxWidth="6xl"
+        maxWidth="near-full"
       >
         {form.submitError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">

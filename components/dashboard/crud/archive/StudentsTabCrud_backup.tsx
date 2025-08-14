@@ -12,7 +12,6 @@ import {
   FormField 
 } from '../shared';
 import { useFormWithValidation, commonSchemas, createFormData } from '../../../lib/hooks/useFormWithValidation';
-import { useEscapeKey } from '../../../lib/hooks/useEscapeKey';
 import InvoiceDetailDrawer from '../invoices/InvoiceDetailDrawer';
 
 interface StudentsTabCrudProps {
@@ -455,70 +454,9 @@ export default function StudentsTabCrud({
     setShowAttendanceDrawer(true);
   };
 
-  const handleViewTuition = async (student: Student) => {
+  const handleViewTuition = (student: Student) => {
     setSelectedStudent(student);
-    setLoadingInvoices(true);
     setShowTuitionDrawer(true);
-    
-    try {
-      // Fetch invoices for this student
-      const response = await fetch(`/api/invoices?student_id=${student.id}&limit=50`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setStudentInvoices(result.data || []);
-      } else {
-        console.error('Failed to fetch student invoices:', result.message);
-        setStudentInvoices([]);
-      }
-    } catch (error) {
-      console.error('Error fetching student invoices:', error);
-      setStudentInvoices([]);
-    } finally {
-      setLoadingInvoices(false);
-    }
-  };
-
-  const handleViewInvoiceDetail = (invoice: any) => {
-    setSelectedInvoice(invoice);
-    setShowInvoiceDetail(true);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount);
-  };
-
-  const getInvoiceStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { label: 'Nháp', color: 'bg-gray-100 text-gray-800' },
-      sent: { label: 'Đã gửi', color: 'bg-blue-100 text-blue-800' },
-      partial: { label: 'Thanh toán một phần', color: 'bg-yellow-100 text-yellow-800' },
-      paid: { label: 'Đã thanh toán', color: 'bg-green-100 text-green-800' },
-      overdue: { label: 'Quá hạn', color: 'bg-red-100 text-red-800' },
-      cancelled: { label: 'Đã hủy', color: 'bg-gray-100 text-gray-800' }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || 
-                  { label: status, color: 'bg-gray-100 text-gray-800' };
-    
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        {config.label}
-      </span>
-    );
-  };
-
-  const getInvoiceTypeLabel = (type: string) => {
-    const labels: { [key: string]: string } = {
-      'tuition': 'Học phí',
-      'standard': 'Dịch vụ',
-      'payroll': 'Lương',
-      'expense': 'Chi phí'
-    };
-    return labels[type] || type;
   };
 
   const handleRowClick = (student: Student) => {
@@ -545,6 +483,74 @@ export default function StudentsTabCrud({
     setShowEditModal(true);
   };
 
+  // Create table actions configuration
+  const getTableActions = (): TableAction<Student>[] => {
+    const actions: TableAction<Student>[] = [];
+    
+    if (onView) {
+      actions.push({
+        label: 'Xem',
+        icon: '👁️',
+        onClick: onView,
+        variant: 'secondary',
+        iconOnly: true,
+        tooltip: 'Xem chi tiết'
+      });
+    }
+
+    // Add attendance button
+    actions.push({
+      label: 'Xem điểm danh',
+      icon: '📋',
+      onClick: handleViewAttendance,
+      variant: 'secondary',
+      iconOnly: true,
+      tooltip: 'Xem điểm danh'
+    });
+
+    // Add tuition fees button
+    actions.push({
+      label: 'Xem học phí',
+      icon: '💰',
+      onClick: handleViewTuition,
+      variant: 'secondary',
+      iconOnly: true,
+      tooltip: 'Xem học phí'
+    });
+    
+    // Always add edit action
+    actions.push({
+      label: 'Sửa',
+      icon: '✏️',
+      onClick: handleEditStudent,
+      variant: 'primary',
+      iconOnly: true,
+      tooltip: 'Chỉnh sửa'
+    });
+
+    if (onEnroll) {
+      actions.push({
+        label: 'Ghi danh',
+        icon: '📝',
+        onClick: onEnroll,
+        variant: 'primary',
+        iconOnly: true,
+        tooltip: 'Ghi danh vào lớp'
+      });
+    }
+    
+    // Always add delete action
+    actions.push({
+      label: 'Xóa',
+      icon: '🗑️',
+      onClick: handleDeleteStudent,
+      variant: 'danger',
+      iconOnly: true,
+      tooltip: 'Xóa'
+    });
+    
+    return actions;
+  };
 
   return (
     <div className="space-y-6">
@@ -556,35 +562,7 @@ export default function StudentsTabCrud({
         filterConfigs={getFilterConfig()}
         onFilterChange={handleFilterChange}
         onClearFilters={handleClearFilters}
-        onView={onView}
-        onEdit={handleEditStudent}
-        onDelete={handleDeleteStudent}
-        customActions={[
-          {
-            label: 'Xem điểm danh',
-            icon: '📋',
-            onClick: handleViewAttendance,
-            variant: 'secondary',
-            iconOnly: true,
-            tooltip: 'Xem điểm danh'
-          },
-          {
-            label: 'Xem học phí',
-            icon: '💰',
-            onClick: handleViewTuition,
-            variant: 'secondary',
-            iconOnly: true,
-            tooltip: 'Xem học phí'
-          },
-          ...(onEnroll ? [{
-            label: 'Ghi danh',
-            icon: '📝',
-            onClick: onEnroll,
-            variant: 'primary' as const,
-            iconOnly: true,
-            tooltip: 'Ghi danh vào lớp'
-          }] : [])
-        ]}
+        customActions={getTableActions()}
         title="Danh sách học sinh"
         createButtonLabel="Thêm học sinh"
         onCreateClick={() => setShowCreateModal(true)}
@@ -609,30 +587,12 @@ export default function StudentsTabCrud({
 
       {/* Student Tuition Drawer */}
       {showTuitionDrawer && selectedStudent && (
-        <StudentTuitionDrawer
+        <StudentTuitionDrawerComponent
           student={selectedStudent}
-          invoices={studentInvoices}
-          loading={loadingInvoices}
           onClose={() => setShowTuitionDrawer(false)}
-          onViewInvoice={handleViewInvoiceDetail}
-          formatCurrency={formatCurrency}
-          getStatusBadge={getInvoiceStatusBadge}
-          getTypeLabel={getInvoiceTypeLabel}
         />
       )}
 
-      {/* Invoice Detail Drawer */}
-      <InvoiceDetailDrawer
-        isOpen={showInvoiceDetail}
-        onClose={() => setShowInvoiceDetail(false)}
-        invoice={selectedInvoice}
-        onPaymentConfirmed={() => {
-          // Refresh invoices when payment is confirmed
-          if (selectedStudent) {
-            handleViewTuition(selectedStudent);
-          }
-        }}
-      />
 
       {/* Create Student Modal */}
       <FormModal
@@ -644,7 +604,7 @@ export default function StudentsTabCrud({
         submitLabel="Thêm mới"
         cancelLabel="Hủy"
         isSubmitting={form.isSubmitting}
-        maxWidth="near-full"
+        maxWidth="6xl"
       >
         {form.submitError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
@@ -833,7 +793,7 @@ export default function StudentsTabCrud({
         submitLabel="Cập nhật"
         cancelLabel="Hủy"
         isSubmitting={editForm.isSubmitting}
-        maxWidth="near-full"
+        maxWidth="6xl"
       >
         {editForm.submitError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
@@ -1015,156 +975,6 @@ export default function StudentsTabCrud({
   );
 }
 
-// Student Tuition Drawer Component
-interface StudentTuitionDrawerProps {
-  student: any;
-  invoices: any[];
-  loading: boolean;
-  onClose: () => void;
-  onViewInvoice: (invoice: any) => void;
-  formatCurrency: (amount: number) => string;
-  getStatusBadge: (status: string) => JSX.Element;
-  getTypeLabel: (type: string) => string;
-}
-
-function StudentTuitionDrawer({ 
-  student, 
-  invoices, 
-  loading, 
-  onClose, 
-  onViewInvoice, 
-  formatCurrency, 
-  getStatusBadge, 
-  getTypeLabel 
-}: StudentTuitionDrawerProps) {
-  // Add ESC key handler
-  useEscapeKey(onClose, true);
-  
-  const totalAmount = invoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-  const paidAmount = invoices.reduce((sum, invoice) => sum + (invoice.paid_amount || 0), 0);
-  const pendingAmount = totalAmount - paidAmount;
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
-        <section className="absolute inset-y-0 right-0 pl-10 max-w-full flex">
-          <div className="w-screen max-w-4xl">
-            <div className="h-full flex flex-col bg-white shadow-xl overflow-y-scroll">
-              <div className="flex-1 py-6 px-4 sm:px-6">
-                <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      Học phí và giao dịch
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      {student?.full_name}
-                    </p>
-                  </div>
-                  <button
-                    onClick={onClose}
-                    className="rounded-md p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                  >
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                {loading ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-sm text-gray-500">Đang tải dữ liệu học phí...</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <h3 className="text-sm font-medium text-blue-900 mb-1">Tổng học phí</h3>
-                        <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalAmount)}</p>
-                      </div>
-                      <div className="bg-green-50 rounded-lg p-4">
-                        <h3 className="text-sm font-medium text-green-900 mb-1">Đã thanh toán</h3>
-                        <p className="text-2xl font-bold text-green-600">{formatCurrency(paidAmount)}</p>
-                      </div>
-                      <div className="bg-orange-50 rounded-lg p-4">
-                        <h3 className="text-sm font-medium text-orange-900 mb-1">Còn lại</h3>
-                        <p className="text-2xl font-bold text-orange-600">{formatCurrency(pendingAmount)}</p>
-                      </div>
-                    </div>
-
-                    {/* Invoices List */}
-                    {invoices.length === 0 ? (
-                      <div className="text-center py-12">
-                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <h3 className="mt-2 text-sm font-medium text-gray-900">Chưa có hóa đơn nào</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                          Học sinh chưa có hóa đơn học phí nào.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <h3 className="text-lg font-medium text-gray-900">Danh sách hóa đơn</h3>
-                        {invoices.map((invoice, index) => (
-                          <div key={invoice.id || index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-3">
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">
-                                      {invoice.invoice_number || `Hóa đơn #${invoice.id}`}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {getTypeLabel(invoice.invoice_type || 'standard')} - {
-                                        invoice.issue_date ? 
-                                        new Date(invoice.issue_date).toLocaleDateString('vi-VN') :
-                                        new Date(invoice.created_at).toLocaleDateString('vi-VN')
-                                      }
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between">
-                                  <div className="text-sm text-gray-600">
-                                    <span className="font-medium">{formatCurrency(invoice.total_amount || 0)}</span>
-                                    {invoice.paid_amount > 0 && (
-                                      <span className="ml-2 text-green-600">
-                                        (Đã trả: {formatCurrency(invoice.paid_amount)})
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    {getStatusBadge(invoice.status)}
-                                    <button
-                                      onClick={() => onViewInvoice(invoice)}
-                                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                    >
-                                      Xem chi tiết
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
 // Student Attendance Drawer Component
 interface StudentAttendanceDrawerProps {
   student: any;
@@ -1172,9 +982,6 @@ interface StudentAttendanceDrawerProps {
 }
 
 function StudentAttendanceDrawerComponent({ student, onClose }: StudentAttendanceDrawerProps) {
-  // Add ESC key handler
-  useEscapeKey(onClose, true);
-  
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

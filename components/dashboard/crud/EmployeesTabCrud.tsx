@@ -11,6 +11,7 @@ import {
   FormGrid, 
   FormField 
 } from '../shared';
+import FileUpload from '../shared/FileUpload';
 import { useFormWithValidation, commonSchemas, createFormData } from '../../../lib/hooks/useFormWithValidation';
 
 interface EmployeesTabCrudProps {
@@ -101,6 +102,10 @@ export default function EmployeesTabCrud({
   const [isLoadingEnums, setIsLoadingEnums] = useState(false);
   const [showCustomNationality, setShowCustomNationality] = useState(false);
 
+  // Avatar file state
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+
   // Filter state
   const [filters, setFilters] = useState({
     status: 'all',
@@ -165,8 +170,13 @@ export default function EmployeesTabCrud({
     },
     onSubmit: async (data) => {
       const submitData = createFormData(data, [
-        'email', 'phone', 'address', 'hire_date', 'id_number', 'id_issue_date', 'id_expiry_date', 'avatar', 'experience', 'qualifications', 'date_of_birth', 'nationality', 'notes'
+        'email', 'phone', 'address', 'hire_date', 'id_number', 'id_issue_date', 'id_expiry_date', 'experience', 'qualifications', 'date_of_birth', 'nationality', 'notes'
       ]);
+
+      // Handle avatar file upload
+      if (avatarFile) {
+        submitData.files = { avatar: avatarFile };
+      }
 
       // Handle custom nationality
       if (data.nationality === 'other' && data.customNationality) {
@@ -179,6 +189,7 @@ export default function EmployeesTabCrud({
     onSuccess: () => {
       form.resetForm();
       setShowCustomNationality(false);
+      setAvatarFile(null);
     }
   });
 
@@ -209,8 +220,13 @@ export default function EmployeesTabCrud({
       if (!editingEmployee) return;
 
       const submitData = createFormData(data, [
-        'email', 'phone', 'address', 'hire_date', 'id_number', 'id_issue_date', 'id_expiry_date', 'avatar', 'experience', 'qualifications', 'date_of_birth', 'nationality', 'notes'
+        'email', 'phone', 'address', 'hire_date', 'id_number', 'id_issue_date', 'id_expiry_date', 'experience', 'qualifications', 'date_of_birth', 'nationality', 'notes'
       ]);
+
+      // Handle avatar file upload
+      if (editAvatarFile) {
+        submitData.files = { avatar: editAvatarFile };
+      }
 
       // Handle custom nationality
       if (data.nationality === 'other' && data.customNationality) {
@@ -227,6 +243,7 @@ export default function EmployeesTabCrud({
     onSuccess: () => {
       editForm.resetForm();
       setShowCustomNationality(false);
+      setEditAvatarFile(null);
     }
   });
 
@@ -275,6 +292,7 @@ export default function EmployeesTabCrud({
     form.resetForm();
     setShowCreateModal(false);
     setShowCustomNationality(false);
+    setAvatarFile(null);
   };
 
   const handleEditModalCancel = () => {
@@ -282,6 +300,7 @@ export default function EmployeesTabCrud({
     setShowEditModal(false);
     setEditingEmployee(null);
     setShowCustomNationality(false);
+    setEditAvatarFile(null);
   };
 
   const handleEditEmployee = (employee: Employee) => {
@@ -466,7 +485,9 @@ export default function EmployeesTabCrud({
         filterConfigs={getFilterConfig()}
         onFilterChange={handleFilterChange}
         onClearFilters={handleClearFilters}
-        customActions={getTableActions()}
+        onView={onView}
+        onEdit={handleEditEmployee}
+        onDelete={onDelete}
         title="Danh sách nhân viên"
         createButtonLabel="Thêm nhân viên"
         onCreateClick={() => setShowCreateModal(true)}
@@ -491,7 +512,7 @@ export default function EmployeesTabCrud({
         submitLabel="Thêm mới"
         cancelLabel="Hủy"
         isSubmitting={form.isSubmitting}
-        maxWidth="6xl"
+        maxWidth="near-full"
       >
         {form.submitError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
@@ -637,11 +658,12 @@ export default function EmployeesTabCrud({
             </FormField>
 
             <FormField label="Avatar">
-              <input
-                {...form.register('avatar')}
-                type="file"
+              <FileUpload
+                label="Chọn ảnh đại diện"
                 accept="image/*"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                maxSize={5}
+                onFileSelect={setAvatarFile}
+                error={form.formState.errors.avatar?.message}
               />
             </FormField>
 
@@ -729,7 +751,7 @@ export default function EmployeesTabCrud({
         submitLabel="Cập nhật"
         cancelLabel="Hủy"
         isSubmitting={editForm.isSubmitting}
-        maxWidth="6xl"
+        maxWidth="near-full"
       >
         {editForm.submitError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
@@ -875,11 +897,13 @@ export default function EmployeesTabCrud({
             </FormField>
 
             <FormField label="Avatar">
-              <input
-                {...editForm.register('avatar')}
-                type="file"
+              <FileUpload
+                label="Chọn ảnh đại diện"
                 accept="image/*"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                maxSize={5}
+                onFileSelect={setEditAvatarFile}
+                currentFile={editingEmployee?.data?.avatar}
+                error={editForm.formState.errors.avatar?.message}
               />
             </FormField>
 
