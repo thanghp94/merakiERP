@@ -177,18 +177,31 @@ CREATE TABLE IF NOT EXISTS finances (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Tasks table
+-- Tasks table (JSONB-optimized with current database structure)
 CREATE TABLE IF NOT EXISTS tasks (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    assigned_to UUID REFERENCES employees(id) ON DELETE SET NULL,
-    due_date DATE,
-    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
-    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
-    data JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    task_id SERIAL NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NULL,
+    task_type TEXT NOT NULL CHECK (task_type = ANY (ARRAY['repeated'::TEXT, 'custom'::TEXT])),
+    frequency JSONB NULL,
+    meta_data JSONB NULL,
+    created_by_employee_id UUID NULL REFERENCES employees(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITHOUT TIME ZONE NULL DEFAULT NOW(),
+    CONSTRAINT tasks_pkey PRIMARY KEY (task_id)
+);
+
+-- Requests table (JSONB-optimized with current database structure)
+CREATE TABLE IF NOT EXISTS requests (
+    id UUID NOT NULL DEFAULT gen_random_uuid(),
+    employee_id UUID NULL REFERENCES employees(id),
+    status TEXT NULL DEFAULT 'pending'::TEXT,
+    priority TEXT NULL DEFAULT 'medium'::TEXT,
+    due_date DATE NULL,
+    data JSONB NULL,
+    created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT NOW(),
+    CONSTRAINT requests_pkey PRIMARY KEY (id)
 );
 
 -- Additional indexes for new tables

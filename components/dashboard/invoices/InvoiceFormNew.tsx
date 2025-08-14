@@ -86,7 +86,20 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
   useEffect(() => {
     loadFormData();
     if (initialData) {
-      setFormData(prev => ({ ...prev, ...initialData }));
+      // Map invoice_items to items for the form
+      const mappedData = {
+        ...initialData,
+        items: initialData.invoice_items || [],
+        // Ensure dates are in the correct format
+        invoice_date: initialData.invoice_date ? initialData.invoice_date.split('T')[0] : new Date().toISOString().split('T')[0],
+        due_date: initialData.due_date ? initialData.due_date.split('T')[0] : '',
+        // Map foreign key fields
+        student_id: initialData.student_id || '',
+        employee_id: initialData.employee_id || '',
+        facility_id: initialData.facility_id || '',
+        class_id: initialData.class_id || '',
+      };
+      setFormData(prev => ({ ...prev, ...mappedData }));
     }
   }, [initialData]);
 
@@ -255,7 +268,7 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
     setIsLoading(true);
 
     try {
-      // Prepare invoice data
+      // Prepare invoice data with proper date handling
       const invoiceData = {
         ...formData,
         // Only include relevant IDs based on income type
@@ -263,6 +276,11 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
         employee_id: !formData.is_income ? formData.employee_id || null : null,
         facility_id: formData.facility_id || null,
         class_id: formData.class_id || null,
+        // Ensure dates are properly formatted or null
+        invoice_date: formData.invoice_date || new Date().toISOString().split('T')[0],
+        due_date: formData.due_date || null,
+        // Ensure payment date is properly formatted if payment is being created
+        payment_date: formData.create_payment ? (formData.payment_date || new Date().toISOString().split('T')[0]) : null,
       };
 
       await onSubmit(invoiceData);

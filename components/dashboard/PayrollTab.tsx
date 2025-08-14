@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatDate, getStatusBadge } from './shared/utils';
+import PayrollModal from './PayrollModal';
 
 interface PayrollPeriod {
   id: string;
@@ -272,23 +273,25 @@ export default function PayrollTab() {
   };
 
   const renderPeriodsTab = () => (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Kỳ lương</h3>
-        <button
-          onClick={() => setShowCreatePeriodForm(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
-        >
-          <span>➕</span>
-          <span>Tạo kỳ lương mới</span>
-        </button>
+    <div className="space-y-3">
+      {/* Filter Controls with Add Button */}
+      <div className="bg-white rounded-lg shadow-md p-3">
+        <div className="flex justify-between items-center">
+          <div className="flex-1"></div>
+          <button
+            onClick={() => setShowCreatePeriodForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
+          >
+            <span>➕</span>
+            <span>Tạo kỳ lương mới</span>
+          </button>
+        </div>
       </div>
 
       {/* Create Period Form */}
       {showCreatePeriodForm && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h4 className="text-lg font-medium text-gray-900 mb-4">Tạo kỳ lương mới</h4>
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <h4 className="text-base font-medium text-gray-900 mb-4">Tạo kỳ lương mới</h4>
           <form onSubmit={handleCreatePeriod} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -350,8 +353,8 @@ export default function PayrollTab() {
 
       {/* Periods List */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h4 className="text-lg font-medium text-gray-900">
+        <div className="px-4 py-2 border-b border-gray-200">
+          <h4 className="text-base font-medium text-gray-900">
             Danh sách kỳ lương ({periods.length})
           </h4>
         </div>
@@ -460,219 +463,6 @@ export default function PayrollTab() {
         )}
       </div>
 
-      {/* Create Record Form */}
-      {showCreateRecordForm && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h4 className="text-lg font-medium text-gray-900 mb-4">Tạo bảng lương mới</h4>
-          <form onSubmit={handleCreateRecord} className="space-y-6">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nhân viên
-                </label>
-                <select
-                  value={recordForm.employee_id}
-                  onChange={(e) => setRecordForm({...recordForm, employee_id: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Chọn nhân viên</option>
-                  {employees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.full_name} ({employee.employee_code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lương cơ bản (VND)
-                </label>
-                <input
-                  type="number"
-                  value={recordForm.base_salary}
-                  onChange={(e) => setRecordForm({...recordForm, base_salary: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Working Days */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Số ngày làm việc chuẩn
-                </label>
-                <input
-                  type="number"
-                  value={recordForm.working_days}
-                  onChange={(e) => setRecordForm({...recordForm, working_days: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Số ngày làm việc thực tế
-                </label>
-                <input
-                  type="number"
-                  value={recordForm.actual_working_days}
-                  onChange={(e) => setRecordForm({...recordForm, actual_working_days: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Số người phụ thuộc
-                </label>
-                <input
-                  type="number"
-                  value={recordForm.dependents}
-                  onChange={(e) => setRecordForm({...recordForm, dependents: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Allowances */}
-            <div>
-              <h5 className="text-md font-medium text-gray-900 mb-3">Phụ cấp</h5>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phụ cấp đi lại (VND)
-                  </label>
-                  <input
-                    type="number"
-                    value={recordForm.allowances.transport}
-                    onChange={(e) => setRecordForm({
-                      ...recordForm, 
-                      allowances: {...recordForm.allowances, transport: e.target.value}
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phụ cấp ăn trưa (VND)
-                  </label>
-                  <input
-                    type="number"
-                    value={recordForm.allowances.lunch}
-                    onChange={(e) => setRecordForm({
-                      ...recordForm, 
-                      allowances: {...recordForm.allowances, lunch: e.target.value}
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phụ cấp điện thoại (VND)
-                  </label>
-                  <input
-                    type="number"
-                    value={recordForm.allowances.phone}
-                    onChange={(e) => setRecordForm({
-                      ...recordForm, 
-                      allowances: {...recordForm.allowances, phone: e.target.value}
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Bonuses */}
-            <div>
-              <h5 className="text-md font-medium text-gray-900 mb-3">Thưởng</h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Thưởng hiệu suất (VND)
-                  </label>
-                  <input
-                    type="number"
-                    value={recordForm.bonuses.performance}
-                    onChange={(e) => setRecordForm({
-                      ...recordForm, 
-                      bonuses: {...recordForm.bonuses, performance: e.target.value}
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Thưởng lễ tết (VND)
-                  </label>
-                  <input
-                    type="number"
-                    value={recordForm.bonuses.holiday}
-                    onChange={(e) => setRecordForm({
-                      ...recordForm, 
-                      bonuses: {...recordForm.bonuses, holiday: e.target.value}
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Other Deductions */}
-            <div>
-              <h5 className="text-md font-medium text-gray-900 mb-3">Khấu trừ khác</h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tạm ứng (VND)
-                  </label>
-                  <input
-                    type="number"
-                    value={recordForm.other_deductions.advance}
-                    onChange={(e) => setRecordForm({
-                      ...recordForm, 
-                      other_deductions: {...recordForm.other_deductions, advance: e.target.value}
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phí công đoàn (VND)
-                  </label>
-                  <input
-                    type="number"
-                    value={recordForm.other_deductions.union_fee}
-                    onChange={(e) => setRecordForm({
-                      ...recordForm, 
-                      other_deductions: {...recordForm.other_deductions, union_fee: e.target.value}
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Tạo bảng lương
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCreateRecordForm(false)}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Hủy
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Records List */}
       {selectedPeriod && (
@@ -831,11 +621,7 @@ export default function PayrollTab() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Hệ thống Lương</h2>
-      </div>
-
+    <div className="space-y-4">
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
@@ -876,6 +662,16 @@ export default function PayrollTab() {
       {activeTab === 'periods' && renderPeriodsTab()}
       {activeTab === 'records' && renderRecordsTab()}
       {activeTab === 'reports' && renderReportsTab()}
+
+      {/* Payroll Modal */}
+      <PayrollModal
+        isOpen={showCreateRecordForm}
+        onClose={() => setShowCreateRecordForm(false)}
+        onSubmit={handleCreateRecord}
+        recordForm={recordForm}
+        setRecordForm={setRecordForm}
+        employees={employees}
+      />
     </div>
   );
 }

@@ -1,24 +1,31 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Import Design System */
+@import './design-system.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   html {
-    font-family: system-ui, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   }
 }
 
 @layer components {
+  /* Legacy button classes - keeping for backward compatibility */
   .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors;
+    @apply bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors min-h-[44px];
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-900 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors;
+    @apply bg-transparent text-orange-500 border-2 border-orange-500 px-4 py-2 rounded-md hover:bg-orange-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors min-h-[44px];
   }
   
   .form-input {
-    @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm;
+    @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm min-h-[44px] px-3 py-2;
   }
   
   .form-label {
@@ -26,6 +33,146 @@
   }
   
   .card {
-    @apply bg-white shadow rounded-lg p-6;
+    @apply bg-white shadow-md rounded-lg p-4 border border-gray-200;
+  }
+
+  /* New Design System Components */
+  .ds-button-primary {
+    @apply inline-flex items-center justify-center font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] bg-orange-500 text-white border-transparent hover:bg-orange-600 focus:ring-orange-500 active:bg-orange-700 px-4 py-2 text-base;
+  }
+
+  .ds-button-secondary {
+    @apply inline-flex items-center justify-center font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] bg-transparent text-orange-500 border-2 border-orange-500 hover:bg-orange-500 hover:text-white focus:ring-orange-500 px-4 py-2 text-base;
+  }
+
+  .ds-card {
+    @apply bg-white rounded-lg border border-gray-200 shadow-md transition-all duration-200 p-4;
+  }
+
+  .ds-input {
+    @apply block px-3 py-2 border rounded-md text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed min-h-[44px] border-gray-300 text-gray-900 placeholder-gray-400;
+  }
+
+  .ds-badge {
+    @apply inline-flex items-center font-medium rounded-full text-center whitespace-nowrap px-2.5 py-0.5 text-sm;
+  }
+
+  .ds-badge-success {
+    @apply ds-badge bg-green-100 text-green-800;
+  }
+
+  .ds-badge-warning {
+    @apply ds-badge bg-yellow-100 text-yellow-800;
+  }
+
+  .ds-badge-error {
+    @apply ds-badge bg-red-100 text-red-800;
+  }
+
+  .ds-badge-info {
+    @apply ds-badge bg-blue-100 text-blue-800;
+  }
+
+  .ds-badge-secondary {
+    @apply ds-badge bg-teal-100 text-teal-800;
+  }
+
+  /* Navigation Components */
+  .ds-nav-tab {
+    @apply py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200;
+  }
+
+  .ds-nav-tab-active {
+    @apply ds-nav-tab border-orange-500 text-orange-600;
+  }
+
+  .ds-nav-tab-inactive {
+    @apply ds-nav-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
+  }
+
+  /* Table Components */
+  .ds-table {
+    @apply min-w-full divide-y divide-gray-200;
+  }
+
+  .ds-table-header {
+    @apply bg-gray-50;
+  }
+
+  .ds-table-header-cell {
+    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+  }
+
+  .ds-table-body {
+    @apply bg-white divide-y divide-gray-200;
+  }
+
+  .ds-table-row {
+    @apply hover:bg-gray-50 transition-colors duration-150;
+  }
+
+  .ds-table-cell {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+  }
+
+  /* Modal Components */
+  .ds-modal-backdrop {
+    @apply fixed inset-0 bg-black bg-opacity-50 transition-opacity;
+  }
+
+  .ds-modal-container {
+    @apply fixed inset-0 z-50 overflow-y-auto;
+  }
+
+  .ds-modal-content {
+    @apply flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0;
+  }
+
+  .ds-modal-panel {
+    @apply relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg;
+  }
+
+  /* Loading States */
+  .ds-loading-spinner {
+    @apply animate-spin rounded-full h-4 w-4 border-b-2 border-current;
+  }
+
+  /* Responsive Utilities */
+  .ds-mobile-only {
+    @apply block sm:hidden;
+  }
+
+  .ds-desktop-only {
+    @apply hidden sm:block;
+  }
+
+  .ds-tablet-up {
+    @apply hidden md:block;
+  }
+}
+
+/* Custom scrollbar styles */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(156 163 175) rgb(243 244 246);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: rgb(243 244 246);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(156 163 175);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(107 114 128);
   }
 }

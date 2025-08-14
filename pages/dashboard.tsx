@@ -5,6 +5,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { ROLES } from '../lib/auth/rbac';
 import { TabType, MainTabType, MainTab, SubTab, ApiTestResult, Class, Facility, ProgramType, UnitOption, Employee, Student, Enrollment, Attendance, Finance, Task, Admission } from '../components/dashboard/shared/types';
 import { tabs, getNextSuggestedUnit } from '../components/dashboard/shared/utils';
+import { Button, Card, Badge } from '../components/ui';
 import PersonalTab from '../components/dashboard/PersonalTab';
 import FacilitiesTab from '../components/dashboard/FacilitiesTab';
 import ClassesTab from '../components/dashboard/ClassesTab';
@@ -15,12 +16,14 @@ import AttendanceTab from '../components/dashboard/AttendanceTab';
 import InvoicesTab from '../components/dashboard/invoices/InvoicesTab';
 import PayrollTab from '../components/dashboard/PayrollTab';
 import TasksTab from '../components/dashboard/TasksTab';
+import BusinessTasksTab from '../components/dashboard/BusinessTasksTab';
 import ScheduleTab from '../components/dashboard/ScheduleTab';
 import ApiTestTab from '../components/dashboard/ApiTestTab';
 import AdmissionsTab from '../components/dashboard/AdmissionsTab';
 import UnitTransitionModal from '../components/dashboard/UnitTransitionModal';
 import ClassEnrollmentModal from '../components/dashboard/ClassEnrollmentModal';
 import AdmissionForm from '../components/AdmissionForm';
+import RequestsTab from '../components/dashboard/RequestsTab';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -39,8 +42,7 @@ export default function Dashboard() {
       subtabs: [
         { id: 'classes', label: 'Lớp học', icon: '🏫' },
         { id: 'sessions', label: 'Buổi học', icon: '📚' },
-        { id: 'schedule', label: 'Lịch học', icon: '📅' },
-        { id: 'tasks', label: 'Bài tập', icon: '📝' }
+        { id: 'schedule', label: 'Lịch học', icon: '📅' }
       ]
     },
     {
@@ -67,6 +69,9 @@ export default function Dashboard() {
       icon: '👤',
       subtabs: [
         { id: 'employees', label: 'Nhân viên', icon: '👨‍💼' },
+        { id: 'requests', label: 'Yêu cầu', icon: '📋' },
+        { id: 'tasks', label: 'Bài tập', icon: '📝' },
+        { id: 'business-tasks', label: 'Công việc', icon: '💼' },
         { id: 'facilities', label: 'Cơ sở', icon: '🏢' }
       ]
     }
@@ -86,6 +91,7 @@ export default function Dashboard() {
   // Filter states for classes
   const [selectedFacility, setSelectedFacility] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('active'); // Default to active
 
   // Unit transition states
   const [showUnitTransitionModal, setShowUnitTransitionModal] = useState(false);
@@ -154,16 +160,28 @@ export default function Dashboard() {
     } else if (activeTab === 'tasks') {
       fetchTasks();
     }
-  }, [activeTab, selectedFacility, selectedProgram]);
+  }, [activeTab, selectedFacility, selectedProgram, selectedStatus]);
 
   // Fetch functions
   const fetchClasses = async () => {
     setIsLoadingClasses(true);
     try {
-      let url = '/api/classes?status=active';
+      let url = '/api/classes';
+      const params = new URLSearchParams();
+      
+      // Add status filter (default to active if not specified)
+      if (selectedStatus) {
+        params.append('status', selectedStatus);
+      } else {
+        params.append('status', 'active');
+      }
       
       if (selectedFacility) {
-        url += `&facility_id=${selectedFacility}`;
+        params.append('facility_id', selectedFacility);
+      }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
       }
 
       const response = await fetch(url);
@@ -698,6 +716,8 @@ export default function Dashboard() {
             setSelectedFacility={setSelectedFacility}
             selectedProgram={selectedProgram}
             setSelectedProgram={setSelectedProgram}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
             handleFormSubmit={handleFormSubmit}
             handleUnitTransition={handleUnitTransition}
             handleClassEnrollment={handleClassEnrollment}
@@ -746,8 +766,12 @@ export default function Dashboard() {
             handleFormSubmit={handleFormSubmit}
           />
         );
+      case 'business-tasks':
+        return <BusinessTasksTab employees={employees} />;
       case 'schedule':
         return <ScheduleTab />;
+      case 'requests':
+        return <RequestsTab employees={employees} />;
       case 'admissions':
         return (
           <AdmissionsTab
@@ -775,7 +799,7 @@ export default function Dashboard() {
         <meta name="description" content="Dashboard quản lý trung tâm" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-teal-50">
         {/* Modern Header with Navigation */}
         <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-gray-200/50 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -783,14 +807,18 @@ export default function Dashboard() {
               {/* Logo and Brand */}
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
                     <span className="text-white text-lg font-bold">M</span>
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 via-orange-500 to-teal-500 bg-clip-text text-transparent tracking-tight">
                       MerakiERP
                     </h1>
-                    <p className="text-xs text-gray-500 hidden sm:block">Hệ thống quản lý trung tâm</p>
+                    <div className="flex items-center space-x-1 mt-0.5">
+                      <div className="w-1 h-1 bg-orange-400 rounded-full animate-pulse"></div>
+                      <div className="w-1 h-1 bg-teal-400 rounded-full animate-pulse delay-75"></div>
+                      <div className="w-1 h-1 bg-orange-300 rounded-full animate-pulse delay-150"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -801,45 +829,51 @@ export default function Dashboard() {
                 {mainTabs
                   .filter(mainTab => mainTab.id !== activeMainTab)
                   .map((mainTab) => (
-                    <button
+                    <Button
                       key={mainTab.id}
+                      variant="text"
+                      size="sm"
                       onClick={() => handleMainTabClick(mainTab.id)}
                       className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2"
                     >
                       <span className="text-base">{mainTab.icon}</span>
                       <span>{mainTab.label}</span>
-                    </button>
+                    </Button>
                   ))}
                 
                 {/* Active main tab - positioned at the end, closest to subtabs */}
                 {mainTabs
                   .filter(mainTab => mainTab.id === activeMainTab)
                   .map((mainTab) => (
-                    <button
+                    <Button
                       key={mainTab.id}
+                      variant="primary"
+                      size="sm"
                       onClick={() => handleMainTabClick(mainTab.id)}
-                      className="bg-blue-600 text-white shadow-lg px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2 ml-2"
+                      className="shadow-lg px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2 ml-2"
                     >
                       <span className="text-base">{mainTab.icon}</span>
                       <span>{mainTab.label}</span>
-                    </button>
+                    </Button>
                   ))}
                 
                 {/* Subtabs - appear horizontally to the right of active main tab */}
                 <div className="flex items-center space-x-1 ml-2 pl-4 border-l border-gray-300">
                   {getCurrentSubtabs().map((subTab) => (
-                    <button
+                    <Button
                       key={subTab.id}
+                      variant={activeTab === subTab.id ? "secondary" : "text"}
+                      size="sm"
                       onClick={() => handleSubTabClick(subTab.id)}
                       className={`${
                         activeTab === subTab.id
-                          ? 'bg-blue-100 text-blue-700 shadow-sm border-blue-200'
+                          ? 'bg-orange-100 text-orange-700 shadow-sm border-orange-200'
                           : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-transparent'
                       } px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center space-x-1.5 border`}
                     >
                       <span className="text-sm">{subTab.icon}</span>
                       <span className="hidden xl:inline">{subTab.label}</span>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </nav>
@@ -863,7 +897,7 @@ export default function Dashboard() {
               {/* User Profile and Actions */}
               <div className="hidden lg:flex items-center space-x-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center shadow-md">
+                  <div className="w-9 h-9 bg-gradient-to-r from-orange-500 to-teal-500 rounded-full flex items-center justify-center shadow-md">
                     <span className="text-white text-sm font-semibold">
                       {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'A'}
                     </span>
@@ -878,15 +912,17 @@ export default function Dashboard() {
                   </div>
                 </div>
                 
-                <button
+                <Button
+                  variant="danger"
+                  size="sm"
                   onClick={handleSignOut}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-md transition-all duration-200"
+                  className="shadow-md"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                   Đăng xuất
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -898,37 +934,37 @@ export default function Dashboard() {
                 {/* Main Tabs */}
                 {mainTabs.map((mainTab) => (
                   <div key={mainTab.id} className="space-y-1">
-                    <button
+                    <Button
+                      variant={activeMainTab === mainTab.id ? "primary" : "text"}
                       onClick={() => handleMainTabClick(mainTab.id)}
-                      className={`${
-                        activeMainTab === mainTab.id
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-                      } w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200`}
+                      className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200"
+                      fullWidth
                     >
                       <span className="text-lg">{mainTab.icon}</span>
                       <span>{mainTab.label}</span>
-                    </button>
+                    </Button>
                     
                     {/* Subtabs - show only for active main tab */}
                     {activeMainTab === mainTab.id && (
                       <div className="ml-4 space-y-1">
                         {mainTab.subtabs.map((subTab) => (
-                          <button
+                          <Button
                             key={subTab.id}
+                            variant={activeTab === subTab.id ? "secondary" : "text"}
                             onClick={() => {
                               handleSubTabClick(subTab.id);
                               setMobileMenuOpen(false);
                             }}
                             className={`${
                               activeTab === subTab.id
-                                ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                ? 'bg-orange-100 text-orange-700 border-orange-200'
                                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-transparent'
                             } w-full flex items-center space-x-3 px-4 py-2 rounded-md text-xs font-medium transition-all duration-200 border`}
+                            fullWidth
                           >
                             <span className="text-base">{subTab.icon}</span>
                             <span>{subTab.label}</span>
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     )}
@@ -938,7 +974,7 @@ export default function Dashboard() {
                 {/* Mobile User Info and Logout */}
                 <div className="pt-4 mt-4 border-t border-gray-200">
                   <div className="flex items-center space-x-3 px-4 py-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-teal-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-semibold">
                         {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'A'}
                       </span>
@@ -952,15 +988,17 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                  <button
+                  <Button
+                    variant="danger"
                     onClick={handleSignOut}
-                    className="w-full mt-2 flex items-center justify-center space-x-2 px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg transition-all duration-200"
+                    className="w-full mt-2 flex items-center justify-center space-x-2 px-4 py-3 text-sm font-medium transition-all duration-200"
+                    fullWidth
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
                     <span>Đăng xuất</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -968,49 +1006,10 @@ export default function Dashboard() {
         </header>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
-            {/* Content Header */}
-            <div className="bg-gradient-to-r from-gray-50 to-blue-50/50 px-6 py-4 border-b border-gray-200/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{getCurrentTabInfo().subTab?.icon}</span>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h2 className="text-xl font-bold text-gray-900">
-                        {getCurrentTabInfo().subTab?.label}
-                      </h2>
-                      <span className="text-sm text-gray-500">•</span>
-                      <span className="text-sm font-medium text-gray-600">
-                        {getCurrentTabInfo().mainTab?.label}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Quản lý và theo dõi {getCurrentTabInfo().subTab?.label.toLowerCase()}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Breadcrumb navigation */}
-                <div className="hidden md:flex items-center space-x-2 text-sm text-gray-500">
-                  <span className="flex items-center space-x-1">
-                    <span>{getCurrentTabInfo().mainTab?.icon}</span>
-                    <span>{getCurrentTabInfo().mainTab?.label}</span>
-                  </span>
-                  <span>›</span>
-                  <span className="flex items-center space-x-1 text-blue-600 font-medium">
-                    <span>{getCurrentTabInfo().subTab?.icon}</span>
-                    <span>{getCurrentTabInfo().subTab?.label}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tab Content */}
-            <div className="p-6">
-              {renderTabContent()}
-            </div>
-          </div>
+        <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-2">
+          <Card className="overflow-hidden shadow-xl" shadow="lg" padding="sm">
+            {renderTabContent()}
+          </Card>
         </main>
       </div>
 

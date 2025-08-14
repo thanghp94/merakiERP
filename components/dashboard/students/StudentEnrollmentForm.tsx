@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '../../../lib/supabase';
+import { FormModal, FormGrid, FormField } from '../shared';
 
 const enrollmentSchema = z.object({
   full_name: z.string().min(2, 'Họ tên phải có ít nhất 2 ký tự'),
@@ -207,204 +208,202 @@ export default function StudentEnrollmentForm({ onSuccess, language = 'vi' }: St
     ]
   };
 
+  const handleModalSubmit = async () => {
+    await handleSubmit(onSubmit)();
+  };
+
+  const handleModalCancel = () => {
+    reset();
+    onSuccess?.();
+  };
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">{currentLabels.title}</h2>
-      
+    <FormModal
+      isOpen={true}
+      onClose={onSuccess || (() => {})}
+      title={currentLabels.title}
+      onSubmit={handleModalSubmit}
+      onCancel={handleModalCancel}
+      submitLabel={loading ? currentLabels.submitting : currentLabels.submit}
+      cancelLabel="Hủy"
+      isSubmitting={loading}
+      maxWidth="6xl"
+    >
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Student Information Section */}
-        <div className="border-b pb-6">
-          <h3 className="text-lg font-medium mb-4">{currentLabels.studentInfo}</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="form-label">{currentLabels.fullName}</label>
-              <input
-                {...register('full_name')}
-                type="text"
-                className="form-input"
-                placeholder={currentLabels.placeholders.fullName}
-              />
-              {errors.full_name && (
-                <p className="mt-1 text-sm text-red-600">{errors.full_name.message}</p>
-              )}
-            </div>
+      {/* Student Information Section */}
+      <div className="mb-4">
+        <h3 className="text-sm font-medium text-gray-800 mb-3">{currentLabels.studentInfo}</h3>
+        <FormGrid columns={4} gap="md">
+          <FormField label={currentLabels.fullName} required>
+            <input
+              {...register('full_name')}
+              type="text"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.fullName}
+            />
+            {errors.full_name && (
+              <p className="mt-1 text-xs text-red-600">{errors.full_name.message}</p>
+            )}
+          </FormField>
 
-            <div>
-              <label className="form-label">{currentLabels.email}</label>
-              <input
-                {...register('email')}
-                type="email"
-                className="form-input"
-                placeholder={currentLabels.placeholders.email}
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
+          <FormField label={currentLabels.email}>
+            <input
+              {...register('email')}
+              type="email"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.email}
+            />
+            {errors.email && (
+              <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+            )}
+          </FormField>
 
-            <div>
-              <label className="form-label">{currentLabels.phone}</label>
-              <input
-                {...register('phone')}
-                type="tel"
-                className="form-input"
-                placeholder={currentLabels.placeholders.phone}
-              />
-              {errors.phone && (
-                <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
-              )}
-            </div>
+          <FormField label={currentLabels.phone}>
+            <input
+              {...register('phone')}
+              type="tel"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.phone}
+            />
+            {errors.phone && (
+              <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>
+            )}
+          </FormField>
 
-            <div>
-              <label className="form-label">{currentLabels.dateOfBirth}</label>
-              <input
-                {...register('date_of_birth')}
-                type="date"
-                className="form-input"
-              />
-            </div>
+          <FormField label={currentLabels.dateOfBirth}>
+            <input
+              {...register('date_of_birth')}
+              type="date"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            />
+          </FormField>
 
-            <div className="md:col-span-2">
-              <label className="form-label">{currentLabels.address}</label>
-              <input
-                {...register('address')}
-                type="text"
-                className="form-input"
-                placeholder={currentLabels.placeholders.address}
-              />
-            </div>
-          </div>
-        </div>
+          <FormField label={currentLabels.address} className="md:col-span-2">
+            <input
+              {...register('address')}
+              type="text"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.address}
+            />
+          </FormField>
 
-        {/* Parent Information Section */}
-        <div className="border-b pb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">{currentLabels.parentInfo}</h3>
-            <button
-              type="button"
-              onClick={copyStudentInfoToParent}
-              className="text-sm text-primary-600 hover:text-primary-700 underline"
+          <FormField label={currentLabels.expectedCampus || 'Cơ sở dự kiến'}>
+            <select 
+              {...register('expected_campus')} 
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             >
-              {language === 'vi' ? 'Sao chép từ thông tin học viên' : 'Copy from student info'}
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="form-label">{currentLabels.parentName}</label>
-              <input
-                {...register('parent_name')}
-                type="text"
-                className="form-input"
-                placeholder={currentLabels.placeholders.parentName}
-              />
-              {errors.parent_name && (
-                <p className="mt-1 text-sm text-red-600">{errors.parent_name.message}</p>
-              )}
-            </div>
+              {campusOptions[language].map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </FormField>
 
-            <div>
-              <label className="form-label">{currentLabels.parentPhone}</label>
-              <input
-                {...register('parent_phone')}
-                type="tel"
-                className="form-input"
-                placeholder={currentLabels.placeholders.parentPhone}
-              />
-              {errors.parent_phone && (
-                <p className="mt-1 text-sm text-red-600">{errors.parent_phone.message}</p>
-              )}
-            </div>
+          <FormField label={currentLabels.program || 'Chương trình học'}>
+            <select 
+              {...register('program')} 
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            >
+              {programOptions[language].map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </FormField>
+        </FormGrid>
+      </div>
 
-            <div>
-              <label className="form-label">{currentLabels.parentEmail}</label>
-              <input
-                {...register('parent_email')}
-                type="email"
-                className="form-input"
-                placeholder={currentLabels.placeholders.parentEmail}
-              />
-              {errors.parent_email && (
-                <p className="mt-1 text-sm text-red-600">{errors.parent_email.message}</p>
-              )}
-            </div>
-          </div>
+      {/* Parent Information Section */}
+      <div className="mb-4 border-t border-gray-200 pt-4">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-sm font-medium text-gray-800">{currentLabels.parentInfo}</h3>
+          <button
+            type="button"
+            onClick={copyStudentInfoToParent}
+            className="text-xs text-orange-600 hover:text-orange-700 underline"
+          >
+            {language === 'vi' ? 'Sao chép từ thông tin học viên' : 'Copy from student info'}
+          </button>
         </div>
+        
+        <FormGrid columns={3} gap="md">
+          <FormField label={currentLabels.parentName} required>
+            <input
+              {...register('parent_name')}
+              type="text"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.parentName}
+            />
+            {errors.parent_name && (
+              <p className="mt-1 text-xs text-red-600">{errors.parent_name.message}</p>
+            )}
+          </FormField>
 
+          <FormField label={currentLabels.parentPhone} required>
+            <input
+              {...register('parent_phone')}
+              type="tel"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.parentPhone}
+            />
+            {errors.parent_phone && (
+              <p className="mt-1 text-xs text-red-600">{errors.parent_phone.message}</p>
+            )}
+          </FormField>
 
-        {/* Additional Information */}
-        <div>
-          <div className="space-y-4">
-        <div>
-          <label className="form-label">{currentLabels.expectedCampus || 'Cơ sở dự kiến'}</label>
-          <select {...register('expected_campus')} className="form-input">
-            {campusOptions[language].map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+          <FormField label={currentLabels.parentEmail}>
+            <input
+              {...register('parent_email')}
+              type="email"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.parentEmail}
+            />
+            {errors.parent_email && (
+              <p className="mt-1 text-xs text-red-600">{errors.parent_email.message}</p>
+            )}
+          </FormField>
+        </FormGrid>
+      </div>
 
-        <div>
-          <label className="form-label">{currentLabels.program || 'Chương trình học'}</label>
-          <select {...register('program')} className="form-input">
-            {programOptions[language].map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Additional Information */}
+      <div className="border-t border-gray-200 pt-4">
+        <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin bổ sung</h3>
+        <FormGrid columns={2} gap="md">
+          <FormField label={currentLabels.currentEnglishLevel || 'Trình độ tiếng Anh hiện tại'}>
+            <input
+              {...register('current_english_level')}
+              type="text"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.currentEnglishLevel || ''}
+            />
+          </FormField>
 
-        <div>
-          <label className="form-label">{currentLabels.studentDescription || 'Miêu tả về học sinh'}</label>
-          <textarea
-            {...register('student_description')}
-            rows={3}
-            className="form-input"
-            placeholder={currentLabels.placeholders.studentDescription || ''}
-          />
-        </div>
+          <FormField label={currentLabels.studentDescription || 'Miêu tả về học sinh'}>
+            <textarea
+              {...register('student_description')}
+              rows={1}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.studentDescription || ''}
+            />
+          </FormField>
 
-        <div>
-          <label className="form-label">{currentLabels.currentEnglishLevel || 'Trình độ tiếng Anh hiện tại'}</label>
-          <input
-            {...register('current_english_level')}
-            type="text"
-            className="form-input"
-            placeholder={currentLabels.placeholders.currentEnglishLevel || ''}
-          />
-        </div>
-
-
-        <div>
-          <label className="form-label">{currentLabels.notes}</label>
-          <textarea
-            {...register('notes')}
-            rows={3}
-            className="form-input"
-            placeholder={currentLabels.placeholders.notes}
-          />
-        </div>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-primary w-full"
-        >
-          {loading ? currentLabels.submitting : currentLabels.submit}
-        </button>
-      </form>
-    </div>
+          <FormField label={currentLabels.notes} className="md:col-span-2">
+            <textarea
+              {...register('notes')}
+              rows={2}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder={currentLabels.placeholders.notes}
+            />
+          </FormField>
+        </FormGrid>
+      </div>
+    </FormModal>
   );
 }

@@ -1,4 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { z } from 'zod';
+import { 
+  DayOfWeekSelector, 
+  WorkScheduleTimeInput,
+  FormModal,
+  FormGrid,
+  FormField
+} from '../shared';
+import { useFormWithValidation, commonSchemas } from '../../../lib/hooks/useFormWithValidation';
+import { DAYS_OF_WEEK } from '../../../lib/constants/businessOptions';
 
 interface WorkSchedule {
   id: string;
@@ -22,6 +32,19 @@ interface WorkScheduleModalProps {
   canEdit?: boolean;
 }
 
+// Work schedule validation schema
+const workScheduleSchema = z.object({
+  day: commonSchemas.requiredString('Ngày trong tuần'),
+  start_time: commonSchemas.requiredString('Giờ bắt đầu'),
+  end_time: commonSchemas.requiredString('Giờ kết thúc'),
+  is_active: z.boolean(),
+  break_start: commonSchemas.optionalString,
+  break_end: commonSchemas.optionalString,
+  notes: commonSchemas.optionalString,
+});
+
+type WorkScheduleFormData = z.infer<typeof workScheduleSchema>;
+
 const WorkScheduleModal: React.FC<WorkScheduleModalProps> = ({
   isOpen,
   onClose,
@@ -29,127 +52,85 @@ const WorkScheduleModal: React.FC<WorkScheduleModalProps> = ({
   canEdit = false
 }) => {
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(null);
   const [showWeeklyView, setShowWeeklyView] = useState(false);
 
-  const daysOfWeek = [
-    { key: 'monday', label: 'Thứ Hai' },
-    { key: 'tuesday', label: 'Thứ Ba' },
-    { key: 'wednesday', label: 'Thứ Tư' },
-    { key: 'thursday', label: 'Thứ Năm' },
-    { key: 'friday', label: 'Thứ Sáu' },
-    { key: 'saturday', label: 'Thứ Bảy' },
-    { key: 'sunday', label: 'Chủ Nhật' }
-  ];
+  // Use the form validation hook
+  const form = useFormWithValidation<WorkScheduleFormData>({
+    schema: workScheduleSchema,
+    defaultValues: {
+      day: 'monday',
+      start_time: '08:00',
+      end_time: '17:00',
+      is_active: true,
+      break_start: '',
+      break_end: '',
+      notes: '',
+    },
+    onSubmit: async (data) => {
+      if (!employee) return;
 
-  const [formData, setFormData] = useState<Partial<WorkSchedule>>({
-    day: 'monday',
-    start_time: '08:00',
-    end_time: '17:00',
-    is_active: true,
-    notes: ''
-  });
-
-  useEffect(() => {
-    if (isOpen && employee) {
-      loadWorkSchedules();
-    }
-  }, [isOpen, employee]);
-
-  const loadWorkSchedules = () => {
-    if (!employee?.data?.work_schedules) {
-      setWorkSchedules([]);
-      return;
-    }
-
-    const schedules = employee.data.work_schedules || [];
-    setWorkSchedules(schedules);
-  };
-
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
-  };
-
-  const handleSaveSchedule = async () => {
-    if (!employee || !formData.day || !formData.start_time || !formData.end_time) {
-      alert('Vui lòng điền đầy đủ thông tin!');
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
       const newSchedule: WorkSchedule = {
         id: editingSchedule?.id || Date.now().toString(),
-        day: formData.day!,
-        start_time: formData.start_time!,
-        end_time: formData.end_time!,
-        is_active: formData.is_active ?? true,
-        notes: formData.notes
+        day: data.day,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        is_active: data.is_active,
+        break_start: data.break_start,
+        break_end: data.break_end,
+        notes: data.notes
       };
 
-      let updatedSchedules;
-      if (editingSchedule) {
-        // Update existing schedule
-        updatedSchedules = workSchedules.map(schedule => 
-          schedule.id === editingSchedule.id ? newSchedule : schedule
-        );
-      } else {
-        // Add new schedule
-        updatedSchedules = [...workSchedules, newSchedule];
-      }
+      const updatedSchedules = editingSchedule
+        ? workSchedules.map(schedule => 
+            schedule.id === editingSchedule.id ? newSchedule : schedule
+          )
+        : [...workSchedules, newSchedule];
 
       // Update employee data
-      const updatedEmployeeData = {
-        ...employee.data,
-        work_schedules: updatedSchedules
-      };
-
       const response = await fetch(`/api/employees/${employee.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          data: updatedEmployeeData
+          data: {
+            ...employee.data,
+            work_schedules: updatedSchedules
+          }
         }),
       });
 
       const result = await response.json();
-
-      if (result.success) {
-        setWorkSchedules(updatedSchedules);
-        setShowAddForm(false);
-        setEditingSchedule(null);
-        setFormData({
-          day: 'monday',
-          start_time: '08:00',
-          end_time: '17:00',
-          is_active: true,
-          notes: ''
-        });
-        alert(editingSchedule ? 'Cập nhật lịch làm việc thành công!' : 'Thêm lịch làm việc thành công!');
-      } else {
-        alert(`Lỗi: ${result.message}`);
+      if (!result.success) {
+        throw new Error(result.message);
       }
-    } catch (error) {
-      console.error('Error saving work schedule:', error);
-      alert('Có lỗi xảy ra khi lưu lịch làm việc!');
-    } finally {
-      setIsSaving(false);
+
+      setWorkSchedules(updatedSchedules);
+      setShowAddForm(false);
+      setEditingSchedule(null);
+    },
+    onSuccess: () => {
+      form.resetForm();
     }
-  };
+  });
+
+  useEffect(() => {
+    if (isOpen && employee) {
+      const schedules = employee.data?.work_schedules || [];
+      setWorkSchedules(schedules);
+    }
+  }, [isOpen, employee]);
 
   const handleEditSchedule = (schedule: WorkSchedule) => {
     setEditingSchedule(schedule);
-    setFormData(schedule);
+    form.resetForm();
+    form.setValue('day', schedule.day);
+    form.setValue('start_time', schedule.start_time);
+    form.setValue('end_time', schedule.end_time);
+    form.setValue('is_active', schedule.is_active);
+    form.setValue('break_start', schedule.break_start || '');
+    form.setValue('break_end', schedule.break_end || '');
+    form.setValue('notes', schedule.notes || '');
     setShowAddForm(true);
   };
 
@@ -158,44 +139,34 @@ const WorkScheduleModal: React.FC<WorkScheduleModalProps> = ({
       return;
     }
 
-    setIsSaving(true);
-
     try {
       const updatedSchedules = workSchedules.filter(schedule => schedule.id !== scheduleId);
-
-      const updatedEmployeeData = {
-        ...employee.data,
-        work_schedules: updatedSchedules
-      };
-
+      
       const response = await fetch(`/api/employees/${employee.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          data: updatedEmployeeData
+          data: {
+            ...employee.data,
+            work_schedules: updatedSchedules
+          }
         }),
       });
 
       const result = await response.json();
-
       if (result.success) {
         setWorkSchedules(updatedSchedules);
-        alert('Xóa lịch làm việc thành công!');
       } else {
         alert(`Lỗi: ${result.message}`);
       }
     } catch (error) {
       console.error('Error deleting work schedule:', error);
       alert('Có lỗi xảy ra khi xóa lịch làm việc!');
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const getDayLabel = (day: string) => {
-    return daysOfWeek.find(d => d.key === day)?.label || day;
+    return DAYS_OF_WEEK.find(d => d.value === day)?.label || day;
   };
 
   const formatTime = (time: string) => {
@@ -205,15 +176,7 @@ const WorkScheduleModal: React.FC<WorkScheduleModalProps> = ({
   // Weekly View Component
   const WorkScheduleWeeklyView = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const weekDays = [
-      { key: 'monday', label: 'Thứ Hai' },
-      { key: 'tuesday', label: 'Thứ Ba' },
-      { key: 'wednesday', label: 'Thứ Tư' },
-      { key: 'thursday', label: 'Thứ Năm' },
-      { key: 'friday', label: 'Thứ Sáu' },
-      { key: 'saturday', label: 'Thứ Bảy' },
-      { key: 'sunday', label: 'Chủ Nhật' }
-    ];
+    const weekDays = DAYS_OF_WEEK;
 
     const getWeekDates = () => {
       const startOfWeek = new Date(currentDate);
@@ -271,11 +234,11 @@ const WorkScheduleModal: React.FC<WorkScheduleModalProps> = ({
         {/* Weekly Grid */}
         <div className="grid grid-cols-7 divide-x divide-gray-200">
           {weekDays.map((day, index) => {
-            const schedules = getSchedulesForDay(day.key);
+            const schedules = getSchedulesForDay(day.value);
             const date = weekDates[index];
             
             return (
-              <div key={day.key} className="p-3 min-h-[120px]">
+              <div key={day.value} className="p-3 min-h-[120px]">
                 <div className="text-center mb-2">
                   <div className="font-semibold text-sm">{day.label}</div>
                   <div className="text-xs text-gray-600">
@@ -340,13 +303,7 @@ const WorkScheduleModal: React.FC<WorkScheduleModalProps> = ({
                 onClick={() => {
                   setShowAddForm(true);
                   setEditingSchedule(null);
-                  setFormData({
-                    day: 'monday',
-                    start_time: '08:00',
-                    end_time: '17:00',
-                    is_active: true,
-                    notes: ''
-                  });
+                  form.resetForm();
                 }}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
               >
@@ -367,119 +324,93 @@ const WorkScheduleModal: React.FC<WorkScheduleModalProps> = ({
           {/* Weekly View */}
           {showWeeklyView && (
             <div className="mb-6">
-              <WorkScheduleWeeklyView key={workSchedules.length} />
+              <WorkScheduleWeeklyView />
             </div>
           )}
 
           {/* Add/Edit Form */}
           {showAddForm && canEdit && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-              <h4 className="text-lg font-medium mb-4">
-                {editingSchedule ? 'Chỉnh sửa lịch làm việc' : 'Thêm lịch làm việc mới'}
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Day */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ngày trong tuần
-                  </label>
-                  <select
-                    name="day"
-                    value={formData.day}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {daysOfWeek.map(day => (
-                      <option key={day.key} value={day.key}>
-                        {day.label}
-                      </option>
-                    ))}
-                  </select>
+            <FormModal
+              isOpen={showAddForm}
+              onClose={() => {
+                setShowAddForm(false);
+                setEditingSchedule(null);
+                form.resetForm();
+              }}
+              title={editingSchedule ? 'Chỉnh sửa lịch làm việc' : 'Thêm lịch làm việc mới'}
+              onSubmit={form.handleSubmit}
+              onCancel={() => {
+                setShowAddForm(false);
+                setEditingSchedule(null);
+                form.resetForm();
+              }}
+              submitLabel={editingSchedule ? 'Cập nhật' : 'Thêm'}
+              cancelLabel="Hủy"
+              isSubmitting={form.isSubmitting}
+              maxWidth="4xl"
+            >
+              {form.submitError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+                  {form.submitError}
                 </div>
+              )}
 
-                {/* Start Time */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Giờ bắt đầu
-                  </label>
-                  <input
-                    type="time"
-                    name="start_time"
-                    value={formData.start_time}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <FormGrid columns={2} gap="md">
+                <FormField label="Ngày trong tuần" required>
+                  <DayOfWeekSelector
+                    value={form.watch('day')}
+                    onChange={(value) => form.setValue('day', value)}
+                    required
                   />
-                </div>
+                  {form.formState.errors.day && (
+                    <p className="mt-1 text-xs text-red-600">{form.formState.errors.day.message}</p>
+                  )}
+                </FormField>
 
-                {/* End Time */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Giờ kết thúc
-                  </label>
-                  <input
-                    type="time"
-                    name="end_time"
-                    value={formData.end_time}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Active Status */}
-                <div>
+                <FormField label="Trạng thái">
                   <label className="flex items-center">
                     <input
+                      {...form.register('is_active')}
                       type="checkbox"
-                      name="is_active"
-                      checked={formData.is_active}
-                      onChange={handleFormChange}
                       className="mr-2"
                     />
-                    <span className="text-sm font-medium text-gray-700">Kích hoạt</span>
+                    <span className="text-sm">Kích hoạt</span>
                   </label>
-                </div>
+                </FormField>
+              </FormGrid>
 
-                {/* Notes */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ghi chú
-                  </label>
+              <div className="mt-4">
+                <WorkScheduleTimeInput
+                  startTime={form.watch('start_time')}
+                  endTime={form.watch('end_time')}
+                  onStartTimeChange={(time) => form.setValue('start_time', time)}
+                  onEndTimeChange={(time) => form.setValue('end_time', time)}
+                  includeBreak={true}
+                  breakStartTime={form.watch('break_start')}
+                  breakEndTime={form.watch('break_end')}
+                  onBreakStartTimeChange={(time) => form.setValue('break_start', time)}
+                  onBreakEndTimeChange={(time) => form.setValue('break_end', time)}
+                  required
+                />
+                {form.formState.errors.start_time && (
+                  <p className="mt-1 text-xs text-red-600">{form.formState.errors.start_time.message}</p>
+                )}
+                {form.formState.errors.end_time && (
+                  <p className="mt-1 text-xs text-red-600">{form.formState.errors.end_time.message}</p>
+                )}
+              </div>
+
+              <div className="mt-4">
+                <FormField label="Ghi chú">
                   <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleFormChange}
+                    {...form.register('notes')}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     placeholder="Ghi chú về lịch làm việc..."
                   />
-                </div>
+                </FormField>
               </div>
-
-              {/* Form Actions */}
-              <div className="flex items-center justify-end gap-3 mt-4">
-                <button
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setEditingSchedule(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={handleSaveSchedule}
-                  disabled={isSaving}
-                  className={`px-6 py-2 text-white rounded-lg transition-colors ${
-                    isSaving
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {isSaving ? 'Đang lưu...' : (editingSchedule ? 'Cập nhật' : 'Thêm')}
-                </button>
-              </div>
-            </div>
+            </FormModal>
           )}
 
           {/* Work Schedules List */}

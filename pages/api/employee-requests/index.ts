@@ -25,20 +25,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getEmployeeRequests(req: NextApiRequest, res: NextApiResponse) {
-  const { employee_id, status, type, limit = 50, offset = 0 } = req.query;
+  const { employee_id, status, priority, limit = 50, offset = 0 } = req.query;
 
   let query = supabase
-    .from('employee_requests')
+    .from('requests')
     .select(`
       *,
-      employees!employee_requests_employee_id_fkey (
+      employee:employees!requests_employee_id_fkey (
         id,
         full_name,
-        data
-      ),
-      approved_by_employee:employees!employee_requests_approved_by_fkey (
-        id,
-        full_name,
+        position,
         data
       )
     `)
@@ -52,8 +48,8 @@ async function getEmployeeRequests(req: NextApiRequest, res: NextApiResponse) {
     query = query.eq('status', status);
   }
 
-  if (type) {
-    query = query.eq('type', type);
+  if (priority) {
+    query = query.eq('priority', priority);
   }
 
   if (limit) {
@@ -87,11 +83,9 @@ async function getEmployeeRequests(req: NextApiRequest, res: NextApiResponse) {
 async function createEmployeeRequest(req: NextApiRequest, res: NextApiResponse) {
   const { 
     employee_id, 
-    type, 
-    title, 
-    description, 
-    start_date, 
-    end_date,
+    status = 'pending',
+    priority = 'medium', 
+    due_date,
     data = {} 
   } = req.body;
 
@@ -103,54 +97,40 @@ async function createEmployeeRequest(req: NextApiRequest, res: NextApiResponse) 
     });
   }
 
-  if (!type) {
+  // Validate status
+  const validStatuses = ['pending', 'approved', 'rejected', 'in_progress', 'completed'];
+  if (!validStatuses.includes(status)) {
     return res.status(400).json({ 
       success: false, 
-      message: 'Loại yêu cầu là bắt buộc' 
+      message: 'Trạng thái không hợp lệ' 
     });
   }
 
-  if (!title) {
+  // Validate priority
+  const validPriorities = ['low', 'medium', 'high', 'urgent'];
+  if (!validPriorities.includes(priority)) {
     return res.status(400).json({ 
       success: false, 
-      message: 'Tiêu đề yêu cầu là bắt buộc' 
-    });
-  }
-
-  if (!start_date) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Ngày bắt đầu là bắt buộc' 
-    });
-  }
-
-  // Validate type
-  const validTypes = ['leave', 'permission', 'sick', 'other'];
-  if (!validTypes.includes(type)) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Loại yêu cầu không hợp lệ' 
+      message: 'Mức độ ưu tiên không hợp lệ' 
     });
   }
 
   try {
     const { data: request, error } = await supabase
-      .from('employee_requests')
+      .from('requests')
       .insert({
         employee_id,
-        type,
-        title,
-        description,
-        start_date,
-        end_date,
-        status: 'pending',
+        status,
+        priority,
+        due_date,
         data
       })
       .select(`
         *,
-        employees!employee_requests_employee_id_fkey (
+        employee:employees!requests_employee_id_fkey (
           id,
           full_name,
+          position,
           data
         )
       `)

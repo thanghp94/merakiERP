@@ -2,6 +2,7 @@ import React from 'react';
 import AttendanceForm from '../AttendanceForm';
 import { Attendance } from './shared/types';
 import { formatDate, getStatusBadge } from './shared/utils';
+import { DataTable, TableColumn } from './shared';
 
 interface AttendanceTabProps {
   showAttendanceForm: boolean;
@@ -18,6 +19,58 @@ export default function AttendanceTab({
   isLoadingAttendances,
   handleFormSubmit
 }: AttendanceTabProps) {
+  // Create table columns configuration
+  const getTableColumns = (): TableColumn<Attendance>[] => {
+    return [
+      {
+        key: 'student_name',
+        label: 'Học sinh',
+        render: (value, row) => (
+          <div className="text-sm font-medium text-gray-900">
+            {row.students?.full_name || 'N/A'}
+          </div>
+        )
+      },
+      {
+        key: 'class_name',
+        label: 'Lớp học',
+        render: (value, row) => (
+          <div className="text-sm text-gray-900">
+            {row.classes?.class_name || 'N/A'}
+          </div>
+        )
+      },
+      {
+        key: 'session_date',
+        label: 'Ngày học',
+        render: (value) => (
+          <div className="text-sm text-gray-900">
+            {formatDate(value)}
+          </div>
+        )
+      },
+      {
+        key: 'status',
+        label: 'Trạng thái',
+        render: (value) => getStatusBadge(value)
+      },
+      {
+        key: 'notes',
+        label: 'Ghi chú',
+        render: (value, row) => (
+          <div className="text-sm text-gray-900">
+            {row.data?.notes || '-'}
+            {row.data?.late_minutes && (
+              <div className="text-sm text-red-600">
+                Trễ {row.data.late_minutes} phút
+              </div>
+            )}
+          </div>
+        )
+      }
+    ];
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -42,80 +95,21 @@ export default function AttendanceTab({
               </h3>
             </div>
 
-            {isLoadingAttendances ? (
-              <div className="p-8 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-2 text-gray-600">Đang tải danh sách điểm danh...</p>
-              </div>
-            ) : attendances.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="text-gray-400 mb-4">
+            <DataTable
+              data={attendances}
+              columns={getTableColumns()}
+              isLoading={isLoadingAttendances}
+              emptyState={{
+                icon: (
                   <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                </div>
-                <h4 className="text-lg font-medium text-gray-900 mb-2">Không có điểm danh nào</h4>
-                <p className="text-gray-600">Chưa có điểm danh nào được tạo.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Học sinh
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Lớp học
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ngày học
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Trạng thái
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ghi chú
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {attendances.map((attendance) => (
-                      <tr key={attendance.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {attendance.students?.full_name || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {attendance.classes?.class_name || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {formatDate(attendance.session_date)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(attendance.status)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {attendance.data?.notes || '-'}
-                            {attendance.data?.late_minutes && (
-                              <div className="text-sm text-red-600">
-                                Trễ {attendance.data.late_minutes} phút
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                ),
+                title: 'Không có điểm danh nào',
+                description: 'Chưa có điểm danh nào được tạo.'
+              }}
+              className="border-0 shadow-none"
+            />
           </div>
         </div>
       )}

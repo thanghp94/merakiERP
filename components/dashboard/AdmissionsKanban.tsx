@@ -24,36 +24,36 @@ const AdmissionsKanban: React.FC<AdmissionsKanbanProps> = ({
       id: 'zalo_consultation',
       title: 'Tư vấn',
       icon: '💬',
-      color: 'bg-green-50 border-green-200',
-      headerColor: 'bg-green-100 text-green-800'
+      color: 'bg-teal-50 border-teal-200',
+      headerColor: 'bg-teal-100 text-teal-800'
     },
     {
       id: 'trial_class_1',
       title: 'Học thử 1',
       icon: '🎯',
-      color: 'bg-purple-50 border-purple-200',
-      headerColor: 'bg-purple-100 text-purple-800'
+      color: 'bg-orange-50 border-orange-200',
+      headerColor: 'bg-orange-100 text-orange-800'
     },
     {
       id: 'trial_class_2',
       title: 'Học thử 2',
       icon: '🎯',
-      color: 'bg-indigo-50 border-indigo-200',
-      headerColor: 'bg-indigo-100 text-indigo-800'
+      color: 'bg-orange-50 border-orange-200',
+      headerColor: 'bg-orange-100 text-orange-800'
     },
     {
       id: 'waiting_class',
       title: 'Chờ lớp',
       icon: '⏰',
-      color: 'bg-yellow-50 border-yellow-200',
-      headerColor: 'bg-yellow-100 text-yellow-800'
+      color: 'bg-teal-50 border-teal-200',
+      headerColor: 'bg-teal-100 text-teal-800'
     },
     {
       id: 'enrolled',
       title: 'Đã đăng ký',
       icon: '✅',
-      color: 'bg-emerald-50 border-emerald-200',
-      headerColor: 'bg-emerald-100 text-emerald-800'
+      color: 'bg-green-50 border-green-200',
+      headerColor: 'bg-green-100 text-green-800'
     }
   ];
 
@@ -82,8 +82,8 @@ const AdmissionsKanban: React.FC<AdmissionsKanbanProps> = ({
   const getUrgencyColor = (urgency?: string) => {
     switch (urgency) {
       case 'high': return 'border-l-4 border-red-500';
-      case 'medium': return 'border-l-4 border-yellow-500';
-      case 'low': return 'border-l-4 border-green-500';
+      case 'medium': return 'border-l-4 border-orange-500';
+      case 'low': return 'border-l-4 border-teal-500';
       default: return 'border-l-4 border-gray-300';
     }
   };
@@ -143,21 +143,6 @@ const AdmissionsKanban: React.FC<AdmissionsKanbanProps> = ({
 
   return (
     <div className="h-full">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Kanban Board - Hành trình Tuyển sinh</h3>
-          <p className="text-sm text-gray-600">Tư vấn → Học thử 1 → Học thử 2 → Chờ lớp → Đã đăng ký</p>
-        </div>
-        <button
-          onClick={onAddAdmission}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
-        >
-          <span>+</span>
-          Thêm khách hàng
-        </button>
-      </div>
-
       {/* Kanban Board */}
       <div className="grid grid-cols-5 gap-2 lg:gap-4" style={{ minHeight: '600px' }}>
         {columns.map((column) => {
@@ -208,14 +193,14 @@ const AdmissionsKanban: React.FC<AdmissionsKanbanProps> = ({
                             const phoneNumber = admission.phone.replace(/\D/g, '');
                             window.location.href = `zalo://chat?phone=${phoneNumber}`;
                           }}
-                          className="text-blue-600 hover:text-blue-800 text-xs flex-shrink-0"
+                          className="text-teal-600 hover:text-teal-700 text-xs flex-shrink-0 p-1 rounded hover:bg-teal-50 transition-colors"
                           title="Nhắn tin Zalo"
                         >
                           💬
                         </button>
                         <button
                           onClick={() => openEmailModal(admission)}
-                          className="text-red-600 hover:text-red-800 text-xs flex-shrink-0"
+                          className="text-orange-600 hover:text-orange-700 text-xs flex-shrink-0 p-1 rounded hover:bg-orange-50 transition-colors"
                           title="Gửi email"
                         >
                           ✉️
@@ -234,7 +219,7 @@ const AdmissionsKanban: React.FC<AdmissionsKanbanProps> = ({
                       {/* Program Interest - Compact */}
                       {admission.data?.interested_program && (
                         <div className="mb-2">
-                          <span className="inline-block bg-blue-100 text-blue-800 text-xs px-1 py-0.5 rounded text-xs">
+                          <span className="inline-block bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
                             📚 {admission.data.interested_program.substring(0, 8)}...
                           </span>
                         </div>
@@ -242,8 +227,8 @@ const AdmissionsKanban: React.FC<AdmissionsKanbanProps> = ({
 
                       {/* Notes - Very Compact */}
                       {admission.data?.notes && (
-                        <div className="mb-2 p-1 bg-gray-50 rounded text-xs text-gray-700 line-clamp-1">
-                          💬 {admission.data.notes.substring(0, 30)}...
+                        <div className="mb-2 p-2 bg-gray-50 rounded-md text-xs text-gray-700 line-clamp-2">
+                          💬 {admission.data.notes.substring(0, 40)}...
                         </div>
                       )}
 
@@ -257,23 +242,23 @@ const AdmissionsKanban: React.FC<AdmissionsKanbanProps> = ({
       </div>
 
       {/* Legend */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <h4 className="text-xs font-semibold text-gray-900 mb-2">Hướng dẫn:</h4>
-        <div className="flex flex-wrap gap-4 text-xs text-gray-600">
-          <div className="flex items-center gap-1">
-            <span>🔥</span>
+      <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-teal-50 rounded-lg border border-orange-200">
+        <h4 className="text-sm font-semibold text-gray-800 mb-3">Hướng dẫn sử dụng:</h4>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm text-gray-700">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 bg-red-500 rounded-full"></span>
             <span>Khẩn cấp</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span>💬</span>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
             <span>Trung bình</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span>🟢</span>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 bg-teal-500 rounded-full"></span>
             <span>Thấp</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span>🖱️</span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🖱️</span>
             <span>Kéo thả để di chuyển</span>
           </div>
         </div>

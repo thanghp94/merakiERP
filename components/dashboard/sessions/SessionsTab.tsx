@@ -302,14 +302,14 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
   };
 
   const getSessionColor = (session: Session) => {
-    // For now, assume all sessions are GrapeSEED based on the data we saw
+    // Use Meraki Education color palette
     switch (session.subject_type) {
       case 'TSI':
-        return 'bg-blue-50 border-l-4 border-blue-400 text-blue-800';
+        return 'bg-orange-50 border-l-4 border-orange-400 text-orange-800';
       case 'REP':
-        return 'bg-green-50 border-l-4 border-green-400 text-green-800';
+        return 'bg-teal-50 border-l-4 border-teal-400 text-teal-800';
       default:
-        return 'bg-purple-50 border-l-4 border-purple-400 text-purple-800';
+        return 'bg-orange-50 border-l-4 border-orange-400 text-orange-800';
     }
   };
 
@@ -385,7 +385,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
     } else {
       return {
         text: 'Nhận xét',
-        className: 'px-3 py-1 bg-white bg-opacity-70 hover:bg-opacity-90 rounded text-xs font-medium transition-colors',
+        className: 'px-3 py-1 bg-white bg-opacity-70 hover:bg-white hover:bg-opacity-90 text-gray-700 rounded text-xs font-medium transition-colors',
         onClick: () => handleTeacherFeedback(session)
       };
     }
@@ -403,7 +403,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
     } else {
       return {
         text: 'Điểm danh',
-        className: 'px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded text-xs font-medium transition-colors',
+        className: 'px-3 py-1 bg-teal-100 hover:bg-teal-200 text-teal-800 rounded text-xs font-medium transition-colors',
         onClick: () => handleCreateAttendance(session)
       };
     }
@@ -515,7 +515,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
               
               switch (status) {
                 case 'both_confirmed':
-                  buttonClass = 'bg-blue-100 hover:bg-blue-200 text-blue-800';
+                  buttonClass = 'bg-teal-100 hover:bg-teal-200 text-teal-800';
                   title = 'Both confirmed - View times';
                   break;
                 case 'teacher_only':
@@ -575,7 +575,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {/* Group Header - only show when there are multiple sessions */}
           {shouldShowHeader && (
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-4">
+            <div className="bg-gradient-to-r from-orange-500 to-teal-500 text-white py-2 px-4">
               <h3 className="font-bold text-lg">{group.class_name}</h3>
             </div>
           )}
@@ -604,12 +604,12 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Date Picker */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Buổi học</h2>
+            <h2 className="text-lg font-semibold text-orange-600">Buổi học</h2>
             <p className="text-sm text-gray-600 mt-1">
               {new Date(selectedDate).toLocaleDateString('vi-VN', {
                 weekday: 'long',
@@ -626,7 +626,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
                 currentDate.setDate(currentDate.getDate() - 1);
                 setSelectedDate(currentDate.toISOString().split('T')[0]);
               }}
-              className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+              className="px-3 py-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
               title="Ngày trước"
             >
               ←
@@ -641,7 +641,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
               />
             </div>
             
@@ -651,7 +651,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
                 currentDate.setDate(currentDate.getDate() + 1);
                 setSelectedDate(currentDate.toISOString().split('T')[0]);
               }}
-              className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+              className="px-3 py-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
               title="Ngày sau"
             >
               →
@@ -673,7 +673,7 @@ const SessionsTab: React.FC<SessionsTabProps> = () => {
       {/* Content */}
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
           <span className="ml-2 text-gray-600">Đang tải...</span>
         </div>
       ) : mainSessionGroups.length === 0 ? (

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import StudentEnrollmentForm from './StudentEnrollmentForm';
 import { Student } from '../shared/types';
 import { getStatusBadge } from '../shared/utils';
+import FilterBar, { FilterConfig } from '../shared/FilterBar';
 
 interface StudentsTabProps {
   showStudentForm: boolean;
@@ -19,6 +20,7 @@ export default function StudentsTab({
   setShowStudentForm
 }: StudentsTabProps): JSX.Element {
   const [filters, setFilters] = useState({
+    facility_type: 'all',
     facility_id: 'all',
     class_id: 'all',
     program_type: 'all'
@@ -176,6 +178,68 @@ export default function StudentsTab({
       return filterOptions.classes;
     }
     return filterOptions.classes.filter(cls => cls.facility_id === filters.facility_id);
+  };
+
+  // Create filter configurations for FilterBar
+  const getFilterConfigs = (): FilterConfig[] => {
+    return [
+      {
+        key: 'facility_type',
+        label: 'Cơ sở',
+        options: [
+          { value: 'all', label: 'Tất cả cơ sở' },
+          { value: 'meraki', label: 'Meraki' },
+          { value: 'partner', label: 'Đối tác' }
+        ],
+        disabled: isLoadingFilters
+      },
+      {
+        key: 'facility_id',
+        label: 'Chi nhánh',
+        options: [
+          { value: 'all', label: 'Tất cả chi nhánh' },
+          ...filterOptions.facilities.map(facility => ({
+            value: facility.id,
+            label: facility.name
+          }))
+        ],
+        disabled: isLoadingFilters
+      },
+      {
+        key: 'class_id',
+        label: 'Lớp học',
+        options: [
+          { value: 'all', label: 'Tất cả lớp học' },
+          ...getFilteredClasses().map(cls => ({
+            value: cls.id,
+            label: cls.class_name
+          }))
+        ],
+        disabled: isLoadingFilters
+      },
+      {
+        key: 'program_type',
+        label: 'Chương trình',
+        options: [
+          { value: 'all', label: 'Tất cả chương trình' },
+          ...filterOptions.programTypes.map(program => ({
+            value: program.value,
+            label: program.label
+          }))
+        ],
+        disabled: isLoadingFilters
+      }
+    ];
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      facility_type: 'all',
+      facility_id: 'all',
+      class_id: 'all',
+      program_type: 'all'
+    });
+    fetchStudents();
   };
 
   // Handle invoice drawer
@@ -472,18 +536,7 @@ export default function StudentsTab({
   };
 
   return (
-    <div className="space-y-6 relative">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Quản lý Học sinh</h2>
-        <button
-          onClick={() => setShowStudentForm(!showStudentForm)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
-        >
-          <span>{showStudentForm ? '📋' : '➕'}</span>
-          <span>{showStudentForm ? 'Xem danh sách' : 'Thêm học sinh'}</span>
-        </button>
-      </div>
-
+    <div className="space-y-3 relative">
       {showStudentForm ? (
         <StudentEnrollmentForm 
           onSuccess={() => {
@@ -492,96 +545,24 @@ export default function StudentsTab({
           }} 
         />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Filter Controls */}
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Bộ lọc</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Facility Filter */}
-              <div>
-                <label htmlFor="facility-filter" className="block text-sm font-medium text-gray-700 mb-2">
-                  Cơ sở
-                </label>
-                <select
-                  id="facility-filter"
-                  value={filters.facility_id}
-                  onChange={(e) => handleFilterChange('facility_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={isLoadingFilters}
-                >
-                  <option value="all">Tất cả cơ sở</option>
-                  {filterOptions.facilities.map((facility) => (
-                    <option key={facility.id} value={facility.id}>
-                      {facility.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Class Filter */}
-              <div>
-                <label htmlFor="class-filter" className="block text-sm font-medium text-gray-700 mb-2">
-                  Lớp học
-                </label>
-                <select
-                  id="class-filter"
-                  value={filters.class_id}
-                  onChange={(e) => handleFilterChange('class_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={isLoadingFilters}
-                >
-                  <option value="all">Tất cả lớp học</option>
-                  {getFilteredClasses().map((cls) => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.class_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Program Type Filter */}
-              <div>
-                <label htmlFor="program-filter" className="block text-sm font-medium text-gray-700 mb-2">
-                  Chương trình
-                </label>
-                <select
-                  id="program-filter"
-                  value={filters.program_type}
-                  onChange={(e) => handleFilterChange('program_type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={isLoadingFilters}
-                >
-                  <option value="all">Tất cả chương trình</option>
-                  {filterOptions.programTypes.map((program) => (
-                    <option key={program.value} value={program.value}>
-                      {program.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Clear Filters Button */}
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => {
-                  setFilters({
-                    facility_id: 'all',
-                    class_id: 'all',
-                    program_type: 'all'
-                  });
-                  fetchStudents(); // Reset to show all students
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                Xóa bộ lọc
-              </button>
-            </div>
-          </div>
+          <FilterBar
+            filters={filters}
+            filterConfigs={getFilterConfigs()}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+            actionButton={{
+              label: showStudentForm ? 'Xem danh sách' : 'Thêm học sinh',
+              icon: showStudentForm ? '📋' : '➕',
+              onClick: () => setShowStudentForm(!showStudentForm)
+            }}
+            isLoading={isLoadingFilters}
+          />
 
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+            <div className="px-4 py-2 border-b border-gray-200">
+              <h3 className="text-base font-medium text-gray-900">
                 Danh sách học sinh ({students.length})
               </h3>
             </div>
@@ -612,22 +593,10 @@ export default function StudentsTab({
                         Họ và tên
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Điện thoại
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Cơ sở dự kiến
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Chương trình
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Phụ huynh
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Trạng thái
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Thao tác
@@ -647,22 +616,7 @@ export default function StudentsTab({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {student.email || '-'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
                             {student.phone || '-'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {student.data?.expected_campus || '-'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {student.data?.program || '-'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -674,9 +628,6 @@ export default function StudentsTab({
                               {student.data.parent.phone}
                             </div>
                           )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(student.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex space-x-2">

@@ -94,6 +94,7 @@ async function createInvoice(req: NextApiRequest, res: NextApiResponse) {
     description,
     notes,
     due_date,
+    invoice_date,
     tax_rate = 0,
     discount_amount = 0,
     items = []
@@ -125,6 +126,10 @@ async function createInvoice(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
+    // Prepare date values - convert empty strings to null
+    const invoiceDate = invoice_date && invoice_date.trim() !== '' ? invoice_date : new Date().toISOString().split('T')[0];
+    const dueDate = due_date && due_date.trim() !== '' ? due_date : null;
+
     // Start transaction
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
@@ -136,7 +141,8 @@ async function createInvoice(req: NextApiRequest, res: NextApiResponse) {
         is_income: is_income || false,
         description,
         notes,
-        due_date,
+        invoice_date: invoiceDate,
+        due_date: dueDate,
         tax_rate,
         discount_amount,
         status: 'draft'
