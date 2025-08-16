@@ -33,9 +33,6 @@ Add these variables to your `.env.local` file:
 
 ```env
 # Google Drive API Configuration
-GOOGLE_CLIENT_ID=946908178422-82rh3p01mffskbqd7562cclgd52ksiqf.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/callback
 
 # These will be obtained through OAuth flow
 GOOGLE_ACCESS_TOKEN=your_access_token_here
