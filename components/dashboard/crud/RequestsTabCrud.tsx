@@ -595,7 +595,7 @@ export default function RequestsTabCrud({
             <FormField label="Mô tả" className="md:col-span-2">
               <textarea
                 {...form.register('description')}
-                rows={2}
+                rows={1}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="Mô tả chi tiết về yêu cầu"
               />

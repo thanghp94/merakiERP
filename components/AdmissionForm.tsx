@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FormModal, FormGrid, FormField } from './dashboard/shared';
+import { FormModal, FormGrid, FormField } from '@/dashboard/shared';
 
 interface AdmissionFormProps {
   onSubmit: (data: any) => void;
@@ -158,7 +158,6 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({ onSubmit, onCancel, initi
 
       {/* Marketing & Program Information */}
       <div className="mb-4 border-t border-gray-200 pt-4">
-        <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin chương trình & tiếp thị</h3>
         <FormGrid columns={4} gap="md">
           <FormField label="Nguồn khách hàng">
             <select
@@ -221,7 +220,6 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({ onSubmit, onCancel, initi
 
       {/* Contact & Social Information */}
       <div className="mb-4 border-t border-gray-200 pt-4">
-        <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin liên hệ & mạng xã hội</h3>
         <FormGrid columns={3} gap="md">
           <FormField label="Zalo ID">
             <input
@@ -260,14 +258,13 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({ onSubmit, onCancel, initi
 
       {/* Additional Notes */}
       <div className="border-t border-gray-200 pt-4">
-        <h3 className="text-sm font-medium text-gray-800 mb-3">Ghi chú bổ sung</h3>
         <FormGrid columns={1} gap="md">
           <FormField label="Ghi chú">
             <textarea
               name="data.notes"
               value={formData.data.notes}
               onChange={handleChange}
-              rows={2}
+              rows={1}
               placeholder="Ghi chú về khách hàng, nhu cầu, tình hình..."
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             />

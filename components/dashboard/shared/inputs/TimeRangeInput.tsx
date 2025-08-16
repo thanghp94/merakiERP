@@ -1,5 +1,5 @@
 import React from 'react';
-import { calculateDuration } from '../../../../lib/constants/businessOptions';
+import { calculateDuration } from '@/constants/businessOptions';
 
 interface TimeRangeInputProps {
   startTime: string;

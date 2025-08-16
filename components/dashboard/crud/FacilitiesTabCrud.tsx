@@ -389,7 +389,7 @@ export default function FacilitiesTabCrud({
         )}
 
         <FormGrid columns={3} gap="md">
-          <FormField label="Tên cơ sở" required>
+          <FormField label="Tên cơ sở" required layout="horizontal">
             <input
               {...form.register('name')}
               type="text"
@@ -401,7 +401,7 @@ export default function FacilitiesTabCrud({
             )}
           </FormField>
 
-          <FormField label="Trạng thái">
+          <FormField label="Trạng thái" layout="horizontal">
             <select
               {...form.register('status')}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -412,7 +412,7 @@ export default function FacilitiesTabCrud({
             </select>
           </FormField>
 
-          <FormField label="Loại cơ sở" required>
+          <FormField label="Loại cơ sở" required layout="horizontal">
             <select
               {...form.register('type')}
               disabled={isLoadingTypes}
@@ -432,7 +432,7 @@ export default function FacilitiesTabCrud({
             )}
           </FormField>
 
-          <FormField label="Địa chỉ cơ sở" className="md:col-span-2">
+          <FormField label="Địa chỉ cơ sở" className="md:col-span-2" layout="horizontal">
             <input
               {...form.register('address')}
               type="text"
@@ -441,7 +441,7 @@ export default function FacilitiesTabCrud({
             />
           </FormField>
 
-          <FormField label="Sức chứa">
+          <FormField label="Sức chứa" layout="horizontal">
             <input
               {...form.register('capacity')}
               type="number"
@@ -451,7 +451,7 @@ export default function FacilitiesTabCrud({
             />
           </FormField>
 
-          <FormField label="Ngày thành lập">
+          <FormField label="Ngày thành lập" layout="horizontal">
             <input
               {...form.register('established')}
               type="date"
@@ -461,7 +461,7 @@ export default function FacilitiesTabCrud({
         </FormGrid>
 
         <div className="mt-4">
-          <FormField label="Mô tả">
+          <FormField label="Mô tả" layout="horizontal" className="md:col-span-2">
             <textarea
               {...form.register('description')}
               rows={2}
@@ -500,7 +500,7 @@ export default function FacilitiesTabCrud({
                   </div>
                   
                   <FormGrid columns={2} gap="sm">
-                    <FormField label="Tên phòng học" required>
+                    <FormField label="Tên phòng học" required layout="horizontal">
                       <input
                         type="text"
                         value={room.name}
@@ -510,7 +510,7 @@ export default function FacilitiesTabCrud({
                       />
                     </FormField>
 
-                    <FormField label="Mô tả phòng học">
+                    <FormField label="Mô tả phòng học" layout="horizontal">
                       <textarea
                         value={room.description}
                         onChange={(e) => updateRoom(room.id, 'description', e.target.value)}
@@ -546,7 +546,7 @@ export default function FacilitiesTabCrud({
         )}
 
         <FormGrid columns={3} gap="md">
-          <FormField label="Tên cơ sở" required>
+          <FormField label="Tên cơ sở" required layout="horizontal">
             <input
               {...form.register('name')}
               type="text"
@@ -558,7 +558,7 @@ export default function FacilitiesTabCrud({
             )}
           </FormField>
 
-          <FormField label="Trạng thái">
+          <FormField label="Trạng thái" layout="horizontal">
             <select
               {...form.register('status')}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -569,7 +569,7 @@ export default function FacilitiesTabCrud({
             </select>
           </FormField>
 
-          <FormField label="Loại cơ sở" required>
+          <FormField label="Loại cơ sở" required layout="horizontal">
             <select
               {...form.register('type')}
               disabled={isLoadingTypes}
@@ -589,7 +589,7 @@ export default function FacilitiesTabCrud({
             )}
           </FormField>
 
-          <FormField label="Địa chỉ cơ sở" className="md:col-span-2">
+          <FormField label="Địa chỉ cơ sở" className="md:col-span-2" layout="horizontal">
             <input
               {...form.register('address')}
               type="text"
@@ -598,7 +598,7 @@ export default function FacilitiesTabCrud({
             />
           </FormField>
 
-          <FormField label="Sức chứa">
+          <FormField label="Sức chứa" layout="horizontal">
             <input
               {...form.register('capacity')}
               type="number"
@@ -608,7 +608,7 @@ export default function FacilitiesTabCrud({
             />
           </FormField>
 
-          <FormField label="Ngày thành lập">
+          <FormField label="Ngày thành lập" layout="horizontal">
             <input
               {...form.register('established')}
               type="date"
@@ -618,7 +618,7 @@ export default function FacilitiesTabCrud({
         </FormGrid>
 
         <div className="mt-4">
-          <FormField label="Mô tả">
+          <FormField label="Mô tả" layout="horizontal" className="md:col-span-2">
             <textarea
               {...form.register('description')}
               rows={2}
@@ -657,7 +657,7 @@ export default function FacilitiesTabCrud({
                   </div>
                   
                   <FormGrid columns={2} gap="sm">
-                    <FormField label="Tên phòng học" required>
+                    <FormField label="Tên phòng học" required layout="horizontal">
                       <input
                         type="text"
                         value={room.name}
@@ -667,7 +667,7 @@ export default function FacilitiesTabCrud({
                       />
                     </FormField>
 
-                    <FormField label="Mô tả phòng học">
+                    <FormField label="Mô tả phòng học" layout="horizontal">
                       <textarea
                         value={room.description}
                         onChange={(e) => updateRoom(room.id, 'description', e.target.value)}

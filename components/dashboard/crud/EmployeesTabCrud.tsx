@@ -1,18 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { z } from 'zod';
-import { Employee } from '../shared/types';
-import { formatDate, getStatusBadge } from '../shared/utils';
+import { Employee } from '@/shared/types';
 import { 
   CrudTable, 
   TableColumn, 
-  TableAction, 
   FilterConfig, 
-  FormModal, 
-  FormGrid, 
-  FormField 
-} from '../shared';
-import FileUpload from '../shared/FileUpload';
-import { useFormWithValidation, commonSchemas, createFormData } from '../../../lib/hooks/useFormWithValidation';
+  FormModal 
+} from '@/dashboard/shared';
+import { useFormWithValidation, commonSchemas, createFormData } from '@/hooks/useFormWithValidation';
+import EmployeeDetailModal from '@/dashboard/tabs/employees/EmployeeDetailModal';
 
 interface EmployeesTabCrudProps {
   employees: Employee[];
@@ -31,8 +27,8 @@ const employeeSchema = z.object({
   phone: commonSchemas.phone,
   address: commonSchemas.optionalString,
   status: z.enum(['active', 'inactive', 'terminated']),
-  position: commonSchemas.requiredString('Chức vụ'),
-  department: commonSchemas.requiredString('Phòng ban'),
+  position: commonSchemas.optionalString,
+  department: commonSchemas.optionalString,
   hire_date: commonSchemas.date,
   id_number: commonSchemas.optionalString,
   id_issue_date: commonSchemas.date,
@@ -54,26 +50,6 @@ const EMPLOYEE_STATUSES = {
   terminated: 'Đã nghỉ việc'
 };
 
-const POSITIONS = {
-  teacher: 'Giáo viên',
-  teaching_assistant: 'Trợ giảng',
-  manager: 'Quản lý',
-  admin: 'Quản trị viên',
-  receptionist: 'Lễ tân',
-  accountant: 'Kế toán',
-  other: 'Khác'
-};
-
-const DEPARTMENTS = {
-  teaching: 'Giảng dạy',
-  administration: 'Hành chính',
-  finance: 'Tài chính',
-  marketing: 'Marketing',
-  hr: 'Nhân sự',
-  it: 'Công nghệ thông tin',
-  other: 'Khác'
-};
-
 const NATIONALITIES = {
   vietnamese: 'Việt Nam',
   american: 'Mỹ',
@@ -82,6 +58,13 @@ const NATIONALITIES = {
   canadian: 'Canada',
   other: 'Khác'
 };
+
+// Modal state interface
+interface ModalState {
+  isOpen: boolean;
+  mode: 'create' | 'edit' | 'view';
+  employee: Employee | null;
+}
 
 export default function EmployeesTabCrud({
   employees,
@@ -92,19 +75,21 @@ export default function EmployeesTabCrud({
   onView,
   onWorkSchedule
 }: EmployeesTabCrudProps) {
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  // Consolidated modal state
+  const [modalState, setModalState] = useState<ModalState>({
+    isOpen: false,
+    mode: 'create',
+    employee: null
+  });
   
   // State for enum values
   const [positionOptions, setPositionOptions] = useState<Array<{value: string, label: string}>>([]);
   const [departmentOptions, setDepartmentOptions] = useState<Array<{value: string, label: string}>>([]);
-  const [isLoadingEnums, setIsLoadingEnums] = useState(false);
-  const [showCustomNationality, setShowCustomNationality] = useState(false);
+  const [isLoadingEnums, setIsLoadingEnums] = useState(true);
 
-  // Avatar file state
+  // Other state
+  const [showCustomNationality, setShowCustomNationality] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -113,39 +98,29 @@ export default function EmployeesTabCrud({
     department: 'all'
   });
 
-  // Fetch enum values on component mount
+  // Load enum values on component mount
   useEffect(() => {
-    fetchEnumValues();
+    loadEnumValues();
   }, []);
 
-  const fetchEnumValues = async () => {
-    setIsLoadingEnums(true);
+  const loadEnumValues = async () => {
     try {
-      const [positionResponse, departmentResponse] = await Promise.all([
-        fetch('/api/metadata/enums?type=position'),
-        fetch('/api/metadata/enums?type=department')
-      ]);
-
-      const [positionResult, departmentResult] = await Promise.all([
-        positionResponse.json(),
-        departmentResponse.json()
-      ]);
-
-      if (positionResult.success && positionResult.data) {
-        setPositionOptions(positionResult.data);
-      }
-
-      if (departmentResult.success && departmentResult.data) {
-        setDepartmentOptions(departmentResult.data);
+      setIsLoadingEnums(true);
+      const response = await fetch('/api/metadata/enums');
+      const data = await response.json();
+      
+      if (data.success) {
+        setPositionOptions(data.data.positions || []);
+        setDepartmentOptions(data.data.departments || []);
       }
     } catch (error) {
-      console.error('Error fetching enum values:', error);
+      console.error('Error loading enum values:', error);
     } finally {
       setIsLoadingEnums(false);
     }
   };
 
-  // Use the form validation hook for creating
+  // Use single form validation hook for all modes
   const form = useFormWithValidation<EmployeeFormData>({
     schema: employeeSchema,
     defaultValues: {
@@ -169,6 +144,8 @@ export default function EmployeesTabCrud({
       notes: '',
     },
     onSubmit: async (data) => {
+      if (modalState.mode === 'view') return; // No submission in view mode
+
       const submitData = createFormData(data, [
         'email', 'phone', 'address', 'hire_date', 'id_number', 'id_issue_date', 'id_expiry_date', 'experience', 'qualifications', 'date_of_birth', 'nationality', 'notes'
       ]);
@@ -183,8 +160,13 @@ export default function EmployeesTabCrud({
         submitData.data.nationality = data.customNationality;
       }
 
+      if (modalState.mode === 'edit' && modalState.employee) {
+        // Add the ID for editing
+        submitData.id = modalState.employee.id;
+      }
+
       await onSubmit(submitData, 'Employee');
-      setShowCreateModal(false);
+      handleModalClose();
     },
     onSuccess: () => {
       form.resetForm();
@@ -193,59 +175,32 @@ export default function EmployeesTabCrud({
     }
   });
 
-  // Use the form validation hook for editing
-  const editForm = useFormWithValidation<EmployeeFormData>({
-    schema: employeeSchema,
-    defaultValues: {
-      full_name: '',
-      email: '',
-      phone: '',
-      address: '',
-      status: 'active',
-      position: '',
-      department: '',
-      hire_date: '',
-      id_number: '',
-      id_issue_date: '',
-      id_expiry_date: '',
-      avatar: '',
-      experience: '',
-      qualifications: '',
-      date_of_birth: '',
-      nationality: '',
-      customNationality: '',
-      notes: '',
-    },
-    onSubmit: async (data) => {
-      if (!editingEmployee) return;
-
-      const submitData = createFormData(data, [
-        'email', 'phone', 'address', 'hire_date', 'id_number', 'id_issue_date', 'id_expiry_date', 'experience', 'qualifications', 'date_of_birth', 'nationality', 'notes'
-      ]);
-
-      // Handle avatar file upload
-      if (editAvatarFile) {
-        submitData.files = { avatar: editAvatarFile };
-      }
-
-      // Handle custom nationality
-      if (data.nationality === 'other' && data.customNationality) {
-        submitData.data.nationality = data.customNationality;
-      }
-
-      // Add the ID for editing
-      submitData.id = editingEmployee.id;
-
-      await onSubmit(submitData, 'Employee');
-      setShowEditModal(false);
-      setEditingEmployee(null);
-    },
-    onSuccess: () => {
-      editForm.resetForm();
-      setShowCustomNationality(false);
-      setEditAvatarFile(null);
+  // Auto-populate form when modal opens in edit or view mode
+  useEffect(() => {
+    if (modalState.isOpen && (modalState.mode === 'edit' || modalState.mode === 'view') && modalState.employee) {
+      const employee = modalState.employee;
+      form.resetForm();
+      form.setValue('full_name', employee.full_name);
+      form.setValue('email', employee.data?.email || '');
+      form.setValue('phone', employee.data?.phone || '');
+      form.setValue('address', employee.data?.address || '');
+      form.setValue('status', employee.status as 'active' | 'inactive' | 'terminated');
+      form.setValue('position', employee.position || '');
+      form.setValue('department', employee.department || '');
+      form.setValue('hire_date', employee.data?.hire_date || '');
+      form.setValue('id_number', employee.data?.id_number || '');
+      form.setValue('id_issue_date', employee.data?.id_issue_date || '');
+      form.setValue('id_expiry_date', employee.data?.id_expiry_date || '');
+      form.setValue('avatar', employee.data?.avatar || '');
+      form.setValue('experience', employee.data?.experience || '');
+      form.setValue('qualifications', employee.data?.qualifications || '');
+      form.setValue('date_of_birth', employee.data?.date_of_birth || '');
+      form.setValue('nationality', employee.data?.nationality || '');
+      form.setValue('notes', employee.data?.notes || '');
+    } else if (modalState.isOpen && modalState.mode === 'create') {
+      form.resetForm();
     }
-  });
+  }, [modalState.isOpen, modalState.mode, modalState.employee, form]);
 
   // Filter employees based on selected filters
   const filteredEmployees = useMemo(() => {
@@ -288,44 +243,40 @@ export default function EmployeesTabCrud({
     });
   };
 
-  const handleModalCancel = () => {
+  // Consolidated modal handlers
+  const handleModalClose = () => {
     form.resetForm();
-    setShowCreateModal(false);
+    setModalState({
+      isOpen: false,
+      mode: 'create',
+      employee: null
+    });
     setShowCustomNationality(false);
     setAvatarFile(null);
   };
 
-  const handleEditModalCancel = () => {
-    editForm.resetForm();
-    setShowEditModal(false);
-    setEditingEmployee(null);
-    setShowCustomNationality(false);
-    setEditAvatarFile(null);
+  const handleCreateClick = () => {
+    setModalState({
+      isOpen: true,
+      mode: 'create',
+      employee: null
+    });
   };
 
   const handleEditEmployee = (employee: Employee) => {
-    setEditingEmployee(employee);
-    
-    // Populate the edit form with employee data
-    editForm.setValue('full_name', employee.full_name);
-    editForm.setValue('email', employee.data?.email || '');
-    editForm.setValue('phone', employee.data?.phone || '');
-    editForm.setValue('address', employee.data?.address || '');
-    editForm.setValue('status', employee.status as 'active' | 'inactive' | 'terminated');
-    editForm.setValue('position', employee.position || '');
-    editForm.setValue('department', employee.department || '');
-    editForm.setValue('hire_date', employee.data?.hire_date || '');
-    editForm.setValue('id_number', employee.data?.id_number || '');
-    editForm.setValue('id_issue_date', employee.data?.id_issue_date || '');
-    editForm.setValue('id_expiry_date', employee.data?.id_expiry_date || '');
-    editForm.setValue('avatar', employee.data?.avatar || '');
-    editForm.setValue('experience', employee.data?.experience || '');
-    editForm.setValue('qualifications', employee.data?.qualifications || '');
-    editForm.setValue('date_of_birth', employee.data?.date_of_birth || '');
-    editForm.setValue('nationality', employee.data?.nationality || '');
-    editForm.setValue('notes', employee.data?.notes || '');
-    
-    setShowEditModal(true);
+    setModalState({
+      isOpen: true,
+      mode: 'edit',
+      employee: employee
+    });
+  };
+
+  const handleViewEmployee = (employee: Employee) => {
+    setModalState({
+      isOpen: true,
+      mode: 'view',
+      employee: employee
+    });
   };
 
   // Filter configuration
@@ -344,12 +295,12 @@ export default function EmployeesTabCrud({
       },
       {
         key: 'position',
-        label: 'Chức vụ',
+        label: 'Vị trí',
         options: [
-          { value: 'all', label: 'Tất cả chức vụ' },
-          ...filterOptions.positions.filter(Boolean).map(position => ({
+          { value: 'all', label: 'Tất cả vị trí' },
+          ...filterOptions.positions.map(position => ({
             value: position!,
-            label: POSITIONS[position as keyof typeof POSITIONS] || position!
+            label: position!
           }))
         ]
       },
@@ -358,9 +309,9 @@ export default function EmployeesTabCrud({
         label: 'Phòng ban',
         options: [
           { value: 'all', label: 'Tất cả phòng ban' },
-          ...filterOptions.departments.filter(Boolean).map(department => ({
+          ...filterOptions.departments.map(department => ({
             value: department!,
-            label: DEPARTMENTS[department as keyof typeof DEPARTMENTS] || department!
+            label: department!
           }))
         ]
       }
@@ -375,11 +326,14 @@ export default function EmployeesTabCrud({
         label: 'Họ và tên',
         render: (value, row) => (
           <div>
-            <div className="text-sm font-medium text-gray-900">{value}</div>
+            <button
+              onClick={() => handleViewEmployee(row)}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+            >
+              {value}
+            </button>
             {row.position && (
-              <div className="text-sm text-gray-500">
-                {POSITIONS[row.position as keyof typeof POSITIONS] || row.position}
-              </div>
+              <div className="text-sm text-gray-500">{row.position}</div>
             )}
           </div>
         )
@@ -403,16 +357,7 @@ export default function EmployeesTabCrud({
         label: 'Phòng ban',
         render: (value) => (
           <div className="text-sm text-gray-900">
-            {value ? DEPARTMENTS[value as keyof typeof DEPARTMENTS] || value : '-'}
-          </div>
-        )
-      },
-      {
-        key: 'hire_date',
-        label: 'Ngày vào làm',
-        render: (value, row) => (
-          <div className="text-sm text-gray-900">
-            {row.data?.hire_date ? formatDate(row.data.hire_date) : '-'}
+            {value || '-'}
           </div>
         )
       },
@@ -436,44 +381,7 @@ export default function EmployeesTabCrud({
     ];
   };
 
-  // Create table actions configuration
-  const getTableActions = (): TableAction<Employee>[] => {
-    const actions: TableAction<Employee>[] = [];
-    
-    if (onView) {
-      actions.push({
-        label: 'Xem',
-        icon: '👁️',
-        onClick: onView,
-        variant: 'secondary',
-        iconOnly: true,
-        tooltip: 'Xem chi tiết'
-      });
-    }
-    
-    // Use local edit handler instead of prop
-    actions.push({
-      label: 'Sửa',
-      icon: '✏️',
-      onClick: handleEditEmployee,
-      variant: 'primary',
-      iconOnly: true,
-      tooltip: 'Chỉnh sửa'
-    });
-    
-    if (onDelete) {
-      actions.push({
-        label: 'Xóa',
-        icon: '🗑️',
-        onClick: onDelete,
-        variant: 'danger',
-        iconOnly: true,
-        tooltip: 'Xóa'
-      });
-    }
-    
-    return actions;
-  };
+  const isReadOnly = modalState.mode === 'view';
 
   return (
     <div className="space-y-6">
@@ -485,12 +393,12 @@ export default function EmployeesTabCrud({
         filterConfigs={getFilterConfig()}
         onFilterChange={handleFilterChange}
         onClearFilters={handleClearFilters}
-        onView={onView}
+        onView={handleViewEmployee}
         onEdit={handleEditEmployee}
         onDelete={onDelete}
         title="Danh sách nhân viên"
         createButtonLabel="Thêm nhân viên"
-        onCreateClick={() => setShowCreateModal(true)}
+        onCreateClick={handleCreateClick}
         emptyState={{
           icon: (
             <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -502,484 +410,145 @@ export default function EmployeesTabCrud({
         }}
       />
 
-      {/* Create Employee Modal */}
-      <FormModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Thêm nhân viên mới"
-        onSubmit={form.handleSubmit}
-        onCancel={handleModalCancel}
-        submitLabel="Thêm mới"
-        cancelLabel="Hủy"
-        isSubmitting={form.isSubmitting}
-        maxWidth="near-full"
-      >
-        {form.submitError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
-            {form.submitError}
+      {/* View Mode: Employee Detail Modal */}
+      <EmployeeDetailModal
+        isOpen={modalState.isOpen && modalState.mode === 'view'}
+        onClose={handleModalClose}
+        employee={modalState.employee}
+      />
+
+      {/* Create/Edit Mode: Form Modal */}
+      {modalState.mode !== 'view' && (
+        <FormModal
+          isOpen={modalState.isOpen}
+          onClose={handleModalClose}
+          title={
+            modalState.mode === 'create' ? 'Thêm nhân viên mới' :
+            modalState.mode === 'edit' ? 'Chỉnh sửa nhân viên' :
+            'Chi tiết nhân viên'
+          }
+          onSubmit={form.handleSubmit}
+          onCancel={handleModalClose}
+          submitLabel={
+            modalState.mode === 'create' ? 'Thêm mới' :
+            modalState.mode === 'edit' ? 'Cập nhật' :
+            undefined
+          }
+          cancelLabel={'Hủy'}
+          isSubmitting={form.isSubmitting}
+          maxWidth="near-full"
+        >
+          {form.submitError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+              {form.submitError}
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Thông tin cơ bản</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Họ và tên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...form.register('full_name')}
+                    type="text"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+                    placeholder="Nhập họ và tên"
+                  />
+                  {form.formState.errors.full_name && (
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.full_name.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    {...form.register('email')}
+                    type="email"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+                    placeholder="email@example.com"
+                  />
+                  {form.formState.errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.email.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                  <input
+                    {...form.register('phone')}
+                    type="tel"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+                    placeholder="0901234567"
+                  />
+                  {form.formState.errors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.phone.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+                  <select
+                    {...form.register('status')}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+                  >
+                    {Object.entries(EMPLOYEE_STATUSES).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  {form.formState.errors.status && (
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.status.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vị trí</label>
+                  <select
+                    {...form.register('position')}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+                  >
+                    <option value="">Chọn vị trí</option>
+                    {positionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {form.formState.errors.position && (
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.position.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phòng ban</label>
+                  <select
+                    {...form.register('department')}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+                  >
+                    <option value="">Chọn phòng ban</option>
+                    {departmentOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {form.formState.errors.department && (
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.department.message}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Additional fields can be added here following the same pattern */}
           </div>
-        )}
-
-        {/* Basic Information */}
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin cơ bản</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Họ và tên" required>
-              <input
-                {...form.register('full_name')}
-                type="text"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Nhập họ và tên"
-              />
-              {form.formState.errors.full_name && (
-                <p className="mt-1 text-xs text-red-600">{form.formState.errors.full_name.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Email" required>
-              <input
-                {...form.register('email')}
-                type="email"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="email@example.com"
-              />
-              {form.formState.errors.email && (
-                <p className="mt-1 text-xs text-red-600">{form.formState.errors.email.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Số điện thoại" required>
-              <input
-                {...form.register('phone')}
-                type="tel"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="0901234567"
-              />
-              {form.formState.errors.phone && (
-                <p className="mt-1 text-xs text-red-600">{form.formState.errors.phone.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Địa chỉ" className="md:col-span-3">
-              <textarea
-                {...form.register('address')}
-                rows={2}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Nhập địa chỉ"
-              />
-            </FormField>
-
-            <FormField label="Chức vụ" required>
-              <select
-                {...form.register('position')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                disabled={isLoadingEnums}
-              >
-                <option value="">Chọn chức vụ</option>
-                {positionOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {form.formState.errors.position && (
-                <p className="mt-1 text-xs text-red-600">{form.formState.errors.position.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Phòng ban" required>
-              <select
-                {...form.register('department')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                disabled={isLoadingEnums}
-              >
-                <option value="">Chọn phòng ban</option>
-                {departmentOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {form.formState.errors.department && (
-                <p className="mt-1 text-xs text-red-600">{form.formState.errors.department.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Trạng thái">
-              <select
-                {...form.register('status')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              >
-                {Object.entries(EMPLOYEE_STATUSES).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-          </FormGrid>
-        </div>
-
-        {/* Employment Information */}
-        <div className="mb-4 border-t border-gray-200 pt-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin công việc</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Ngày vào làm">
-              <input
-                {...form.register('hire_date')}
-                type="date"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </FormField>
-
-            <FormField label="CMND/Passport">
-              <input
-                {...form.register('id_number')}
-                type="text"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Số CMND/Passport"
-              />
-            </FormField>
-
-            <FormField label="Ngày cấp">
-              <input
-                {...form.register('id_issue_date')}
-                type="date"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </FormField>
-
-            <FormField label="Ngày hết hạn">
-              <input
-                {...form.register('id_expiry_date')}
-                type="date"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </FormField>
-
-            <FormField label="Avatar">
-              <FileUpload
-                label="Chọn ảnh đại diện"
-                accept="image/*"
-                maxSize={5}
-                onFileSelect={setAvatarFile}
-                error={form.formState.errors.avatar?.message}
-              />
-            </FormField>
-
-            <FormField label="Kinh nghiệm" className="md:col-span-3">
-              <textarea
-                {...form.register('experience')}
-                rows={3}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Mô tả kinh nghiệm làm việc"
-              />
-            </FormField>
-
-            <FormField label="Bằng cấp" className="md:col-span-3">
-              <textarea
-                {...form.register('qualifications')}
-                rows={3}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Mô tả bằng cấp, chứng chỉ"
-              />
-            </FormField>
-          </FormGrid>
-        </div>
-
-        {/* Personal Information */}
-        <div className="mb-4 border-t border-gray-200 pt-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin cá nhân</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Ngày sinh">
-              <input
-                {...form.register('date_of_birth')}
-                type="date"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </FormField>
-
-            <FormField label="Quốc tịch">
-              <select
-                {...form.register('nationality')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                onChange={(e) => {
-                  form.setValue('nationality', e.target.value);
-                  setShowCustomNationality(e.target.value === 'other');
-                }}
-              >
-                <option value="">Chọn quốc tịch</option>
-                {Object.entries(NATIONALITIES).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {showCustomNationality && (
-                <input
-                  {...form.register('customNationality')}
-                  type="text"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mt-2"
-                  placeholder="Nhập quốc tịch khác"
-                />
-              )}
-            </FormField>
-          </FormGrid>
-        </div>
-
-        {/* Additional Information */}
-        <div className="border-t border-gray-200 pt-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin bổ sung</h3>
-          <FormField label="Ghi chú">
-            <textarea
-              {...form.register('notes')}
-              rows={2}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Ghi chú thêm về nhân viên"
-            />
-          </FormField>
-        </div>
-      </FormModal>
-
-      {/* Edit Employee Modal */}
-      <FormModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        title="Chỉnh sửa nhân viên"
-        onSubmit={editForm.handleSubmit}
-        onCancel={handleEditModalCancel}
-        submitLabel="Cập nhật"
-        cancelLabel="Hủy"
-        isSubmitting={editForm.isSubmitting}
-        maxWidth="near-full"
-      >
-        {editForm.submitError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
-            {editForm.submitError}
-          </div>
-        )}
-
-        {/* Basic Information */}
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin cơ bản</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Họ và tên" required>
-              <input
-                {...editForm.register('full_name')}
-                type="text"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Nhập họ và tên"
-              />
-              {editForm.formState.errors.full_name && (
-                <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.full_name.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Email" required>
-              <input
-                {...editForm.register('email')}
-                type="email"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="email@example.com"
-              />
-              {editForm.formState.errors.email && (
-                <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.email.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Số điện thoại" required>
-              <input
-                {...editForm.register('phone')}
-                type="tel"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="0901234567"
-              />
-              {editForm.formState.errors.phone && (
-                <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.phone.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Địa chỉ" className="md:col-span-3">
-              <textarea
-                {...editForm.register('address')}
-                rows={2}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Nhập địa chỉ"
-              />
-            </FormField>
-
-            <FormField label="Chức vụ" required>
-              <select
-                {...editForm.register('position')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                disabled={isLoadingEnums}
-              >
-                <option value="">Chọn chức vụ</option>
-                {positionOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {editForm.formState.errors.position && (
-                <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.position.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Phòng ban" required>
-              <select
-                {...editForm.register('department')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                disabled={isLoadingEnums}
-              >
-                <option value="">Chọn phòng ban</option>
-                {departmentOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {editForm.formState.errors.department && (
-                <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.department.message}</p>
-              )}
-            </FormField>
-
-            <FormField label="Trạng thái">
-              <select
-                {...editForm.register('status')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              >
-                {Object.entries(EMPLOYEE_STATUSES).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-          </FormGrid>
-        </div>
-
-        {/* Employment Information */}
-        <div className="mb-4 border-t border-gray-200 pt-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin công việc</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Ngày vào làm">
-              <input
-                {...editForm.register('hire_date')}
-                type="date"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </FormField>
-
-            <FormField label="CMND/Passport">
-              <input
-                {...editForm.register('id_number')}
-                type="text"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Số CMND/Passport"
-              />
-            </FormField>
-
-            <FormField label="Ngày cấp">
-              <input
-                {...editForm.register('id_issue_date')}
-                type="date"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </FormField>
-
-            <FormField label="Ngày hết hạn">
-              <input
-                {...editForm.register('id_expiry_date')}
-                type="date"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </FormField>
-
-            <FormField label="Avatar">
-              <FileUpload
-                label="Chọn ảnh đại diện"
-                accept="image/*"
-                maxSize={5}
-                onFileSelect={setEditAvatarFile}
-                currentFile={editingEmployee?.data?.avatar}
-                error={editForm.formState.errors.avatar?.message}
-              />
-            </FormField>
-
-            <FormField label="Kinh nghiệm" className="md:col-span-3">
-              <textarea
-                {...editForm.register('experience')}
-                rows={3}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Mô tả kinh nghiệm làm việc"
-              />
-            </FormField>
-
-            <FormField label="Bằng cấp" className="md:col-span-3">
-              <textarea
-                {...editForm.register('qualifications')}
-                rows={3}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Mô tả bằng cấp, chứng chỉ"
-              />
-            </FormField>
-          </FormGrid>
-        </div>
-
-        {/* Personal Information */}
-        <div className="mb-4 border-t border-gray-200 pt-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin cá nhân</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Ngày sinh">
-              <input
-                {...editForm.register('date_of_birth')}
-                type="date"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </FormField>
-
-            <FormField label="Quốc tịch">
-              <select
-                {...editForm.register('nationality')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                onChange={(e) => {
-                  editForm.setValue('nationality', e.target.value);
-                  setShowCustomNationality(e.target.value === 'other');
-                }}
-              >
-                <option value="">Chọn quốc tịch</option>
-                {Object.entries(NATIONALITIES).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {showCustomNationality && (
-                <input
-                  {...editForm.register('customNationality')}
-                  type="text"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mt-2"
-                  placeholder="Nhập quốc tịch khác"
-                />
-              )}
-            </FormField>
-          </FormGrid>
-        </div>
-
-        {/* Additional Information */}
-        <div className="border-t border-gray-200 pt-4">
-          <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin bổ sung</h3>
-          <FormField label="Ghi chú">
-            <textarea
-              {...editForm.register('notes')}
-              rows={2}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Ghi chú thêm về nhân viên"
-            />
-          </FormField>
-        </div>
-      </FormModal>
+        </FormModal>
+      )}
     </div>
   );
 }

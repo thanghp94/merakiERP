@@ -2,7 +2,7 @@
 // This implements the frontend integration from USER_EMPLOYEE_MAPPING_PLAN.md
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '@/auth/AuthContext';
 
 interface Employee {
   id: string;

@@ -1,5 +1,5 @@
-import { supabase } from '../supabase';
-import type { Student } from '../supabase';
+import { supabase } from '@/lib/supabase';
+import type { Student } from '@/lib/supabase';
 
 export interface CreateStudentData {
   full_name: string;

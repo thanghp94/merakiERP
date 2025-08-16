@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { z } from 'zod';
-import { Student } from '../shared/types';
-import { formatDate, getStatusBadge } from '../shared/utils';
+import { Student } from '@/shared/types';
+import { formatDate, getStatusBadge } from '@/shared/utils';
 import { 
   CrudTable, 
   TableColumn, 
@@ -10,10 +10,10 @@ import {
   FormModal, 
   FormGrid, 
   FormField 
-} from '../shared';
-import { useFormWithValidation, commonSchemas, createFormData } from '../../../lib/hooks/useFormWithValidation';
-import { useEscapeKey } from '../../../lib/hooks/useEscapeKey';
-import InvoiceDetailDrawer from '../invoices/InvoiceDetailDrawer';
+} from '@/dashboard/shared';
+import { useFormWithValidation, commonSchemas, createFormData } from '@/hooks/useFormWithValidation';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import InvoiceDetailDrawer from '@/dashboard/tabs/invoices/InvoiceDetailDrawer';
 
 interface StudentsTabCrudProps {
   students: Student[];
@@ -73,6 +73,208 @@ const PROGRAMS = {
   other: 'Khác'
 };
 
+// Student form fields configuration
+interface StudentFormFieldConfig {
+  name: keyof StudentFormData;
+  label: string;
+  type: 'text' | 'email' | 'tel' | 'date' | 'select' | 'textarea';
+  required?: boolean;
+  placeholder?: string;
+  options?: { value: string; label: string }[];
+  section: 'basic' | 'academic' | 'parent' | 'additional';
+  rows?: number;
+}
+
+const studentFormFields: StudentFormFieldConfig[] = [
+  // Basic Information
+  {
+    name: 'full_name',
+    label: 'Họ và tên',
+    type: 'text',
+    required: true,
+    placeholder: 'Nhập họ và tên',
+    section: 'basic'
+  },
+  {
+    name: 'email',
+    label: 'Email',
+    type: 'email',
+    placeholder: 'email@example.com',
+    section: 'basic'
+  },
+  {
+    name: 'phone',
+    label: 'Số điện thoại',
+    type: 'tel',
+    placeholder: '0901234567',
+    section: 'basic'
+  },
+  {
+    name: 'date_of_birth',
+    label: 'Ngày sinh',
+    type: 'date',
+    section: 'basic'
+  },
+  {
+    name: 'status',
+    label: 'Trạng thái',
+    type: 'select',
+    options: Object.entries(STUDENT_STATUSES).map(([value, label]) => ({ value, label })),
+    section: 'basic'
+  },
+  {
+    name: 'address',
+    label: 'Địa chỉ',
+    type: 'textarea',
+    placeholder: 'Nhập địa chỉ',
+    rows: 1,
+    section: 'basic'
+  },
+  // Academic Information
+  {
+    name: 'program',
+    label: 'Chương trình mong muốn',
+    type: 'select',
+    options: [
+      { value: '', label: 'Chọn chương trình' },
+      ...Object.entries(PROGRAMS).map(([value, label]) => ({ value, label }))
+    ],
+    section: 'academic'
+  },
+  {
+    name: 'current_english_level',
+    label: 'Trình độ tiếng Anh hiện tại',
+    type: 'select',
+    options: [
+      { value: '', label: 'Chọn trình độ' },
+      ...Object.entries(ENGLISH_LEVELS).map(([value, label]) => ({ value, label }))
+    ],
+    section: 'academic'
+  },
+  {
+    name: 'expected_campus',
+    label: 'Cơ sở mong muốn',
+    type: 'text',
+    placeholder: 'Tên cơ sở',
+    section: 'academic'
+  },
+  {
+    name: 'student_description',
+    label: 'Mô tả học sinh',
+    type: 'textarea',
+    placeholder: 'Mô tả về học sinh, mục tiêu học tập, v.v.',
+    rows: 2,
+    section: 'academic'
+  },
+  // Parent Information
+  {
+    name: 'parent_name',
+    label: 'Tên phụ huynh',
+    type: 'text',
+    placeholder: 'Họ tên phụ huynh',
+    section: 'parent'
+  },
+  {
+    name: 'parent_phone',
+    label: 'Số điện thoại phụ huynh',
+    type: 'tel',
+    placeholder: '0901234567',
+    section: 'parent'
+  },
+  {
+    name: 'parent_email',
+    label: 'Email phụ huynh',
+    type: 'email',
+    placeholder: 'email@example.com',
+    section: 'parent'
+  },
+  // Additional Information
+  {
+    name: 'notes',
+    label: 'Ghi chú',
+    type: 'textarea',
+    placeholder: 'Ghi chú thêm về học sinh',
+    rows: 2,
+    section: 'additional'
+  }
+];
+
+// Form field renderer helper function
+const renderFormField = (field: StudentFormFieldConfig, form: any) => {
+  const commonClasses = "w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500";
+  
+  const renderInput = () => {
+    switch (field.type) {
+      case 'select':
+        return (
+          <select
+            {...form.register(field.name)}
+            className={commonClasses}
+          >
+            {field.options?.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        );
+      case 'textarea':
+        return (
+          <textarea
+            {...form.register(field.name)}
+            rows={field.rows || 2}
+            className={commonClasses}
+            placeholder={field.placeholder}
+          />
+        );
+      default:
+        return (
+          <input
+            {...form.register(field.name)}
+            type={field.type}
+            className={commonClasses}
+            placeholder={field.placeholder}
+          />
+        );
+    }
+  };
+
+  return (
+    <FormField
+      key={field.name}
+      label={field.label}
+      required={field.required}
+      layout="horizontal"
+      error={form.formState.errors[field.name]?.message}
+    >
+      {renderInput()}
+    </FormField>
+  );
+};
+
+// Form fields renderer by section
+const renderFormSection = (sectionName: string, sectionTitle: string, fields: StudentFormFieldConfig[], form: any, isFirstSection = false) => {
+  const sectionFields = fields.filter(field => field.section === sectionName);
+  
+  if (sectionFields.length === 0) return null;
+
+  return (
+    <div className={`${isFirstSection ? 'mb-4' : 'mb-4 border-t border-gray-200 pt-4'}`}>
+      <h3 className="text-sm font-medium text-gray-800 mb-3">{sectionTitle}</h3>
+      <div className="space-y-2">
+        {sectionFields.map(field => renderFormField(field, form))}
+      </div>
+    </div>
+  );
+};
+
+// Modal state interface
+interface ModalState {
+  isOpen: boolean;
+  formType: 'create' | 'edit';
+  initialData: Student | null;
+}
+
 export default function StudentsTabCrud({
   students,
   isLoading,
@@ -82,9 +284,11 @@ export default function StudentsTabCrud({
   onView,
   onEnroll
 }: StudentsTabCrudProps) {
+  // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  
   const [showAttendanceDrawer, setShowAttendanceDrawer] = useState(false);
   const [showTuitionDrawer, setShowTuitionDrawer] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -421,15 +625,6 @@ export default function StudentsTabCrud({
         )
       },
       {
-        key: 'expected_campus',
-        label: 'Cơ sở mong muốn',
-        render: (value, row) => (
-          <div className="text-sm text-gray-900">
-            {row.data?.expected_campus || '-'}
-          </div>
-        )
-      },
-      {
         key: 'status',
         label: 'Trạng thái',
         render: (value) => {
@@ -656,43 +851,47 @@ export default function StudentsTabCrud({
         <div className="mb-4">
           <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin cơ bản</h3>
           <FormGrid columns={3} gap="md">
-            <FormField label="Họ và tên" required>
+            <FormField 
+              label="Họ và tên" 
+              required 
+              layout="horizontal"
+              error={form.formState.errors.full_name?.message}
+            >
               <input
                 {...form.register('full_name')}
                 type="text"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="Nhập họ và tên"
               />
-              {form.formState.errors.full_name && (
-                <p className="mt-1 text-xs text-red-600">{form.formState.errors.full_name.message}</p>
-              )}
             </FormField>
 
-            <FormField label="Email">
+            <FormField 
+              label="Email" 
+              layout="horizontal"
+              error={form.formState.errors.email?.message}
+            >
               <input
                 {...form.register('email')}
                 type="email"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="email@example.com"
               />
-              {form.formState.errors.email && (
-                <p className="mt-1 text-xs text-red-600">{form.formState.errors.email.message}</p>
-              )}
             </FormField>
 
-            <FormField label="Số điện thoại">
+            <FormField 
+              label="Số điện thoại" 
+              layout="horizontal"
+              error={form.formState.errors.phone?.message}
+            >
               <input
                 {...form.register('phone')}
                 type="tel"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="0901234567"
               />
-              {form.formState.errors.phone && (
-                <p className="mt-1 text-xs text-red-600">{form.formState.errors.phone.message}</p>
-              )}
             </FormField>
 
-            <FormField label="Ngày sinh">
+            <FormField label="Ngày sinh" layout="horizontal">
               <input
                 {...form.register('date_of_birth')}
                 type="date"
@@ -700,7 +899,7 @@ export default function StudentsTabCrud({
               />
             </FormField>
 
-            <FormField label="Trạng thái">
+            <FormField label="Trạng thái" layout="horizontal">
               <select
                 {...form.register('status')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -713,7 +912,7 @@ export default function StudentsTabCrud({
               </select>
             </FormField>
 
-            <FormField label="Địa chỉ" className="md:col-span-3">
+            <FormField label="Địa chỉ" layout="horizontal">
               <textarea
                 {...form.register('address')}
                 rows={1}
@@ -727,8 +926,8 @@ export default function StudentsTabCrud({
         {/* Academic Information */}
         <div className="mb-4 border-t border-gray-200 pt-4">
           <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin học tập</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Chương trình mong muốn">
+          <div className="space-y-2">
+            <FormField label="Chương trình mong muốn" layout="horizontal">
               <select
                 {...form.register('program')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -742,7 +941,7 @@ export default function StudentsTabCrud({
               </select>
             </FormField>
 
-            <FormField label="Trình độ tiếng Anh hiện tại">
+            <FormField label="Trình độ tiếng Anh hiện tại" layout="horizontal">
               <select
                 {...form.register('current_english_level')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -756,7 +955,7 @@ export default function StudentsTabCrud({
               </select>
             </FormField>
 
-            <FormField label="Cơ sở mong muốn">
+            <FormField label="Cơ sở mong muốn" layout="horizontal">
               <input
                 {...form.register('expected_campus')}
                 type="text"
@@ -765,7 +964,7 @@ export default function StudentsTabCrud({
               />
             </FormField>
 
-            <FormField label="Mô tả học sinh" className="md:col-span-3">
+            <FormField label="Mô tả học sinh" layout="horizontal">
               <textarea
                 {...form.register('student_description')}
                 rows={2}
@@ -773,14 +972,14 @@ export default function StudentsTabCrud({
                 placeholder="Mô tả về học sinh, mục tiêu học tập, v.v."
               />
             </FormField>
-          </FormGrid>
+          </div>
         </div>
 
         {/* Parent Information */}
         <div className="mb-4 border-t border-gray-200 pt-4">
           <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin phụ huynh</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Tên phụ huynh">
+          <div className="space-y-2">
+            <FormField label="Tên phụ huynh" layout="horizontal">
               <input
                 {...form.register('parent_name')}
                 type="text"
@@ -789,7 +988,7 @@ export default function StudentsTabCrud({
               />
             </FormField>
 
-            <FormField label="Số điện thoại phụ huynh">
+            <FormField label="Số điện thoại phụ huynh" layout="horizontal">
               <input
                 {...form.register('parent_phone')}
                 type="tel"
@@ -798,7 +997,7 @@ export default function StudentsTabCrud({
               />
             </FormField>
 
-            <FormField label="Email phụ huynh">
+            <FormField label="Email phụ huynh" layout="horizontal">
               <input
                 {...form.register('parent_email')}
                 type="email"
@@ -806,13 +1005,13 @@ export default function StudentsTabCrud({
                 placeholder="email@example.com"
               />
             </FormField>
-          </FormGrid>
+          </div>
         </div>
 
         {/* Additional Information */}
         <div className="border-t border-gray-200 pt-4">
           <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin bổ sung</h3>
-          <FormField label="Ghi chú">
+          <FormField label="Ghi chú" layout="horizontal">
             <textarea
               {...form.register('notes')}
               rows={2}
@@ -844,44 +1043,48 @@ export default function StudentsTabCrud({
         {/* Basic Information */}
         <div className="mb-4">
           <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin cơ bản</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Họ và tên" required>
+          <div className="space-y-2">
+            <FormField 
+              label="Họ và tên" 
+              required 
+              layout="horizontal"
+              error={editForm.formState.errors.full_name?.message}
+            >
               <input
                 {...editForm.register('full_name')}
                 type="text"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="Nhập họ và tên"
               />
-              {editForm.formState.errors.full_name && (
-                <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.full_name.message}</p>
-              )}
             </FormField>
 
-            <FormField label="Email">
+            <FormField 
+              label="Email" 
+              layout="horizontal"
+              error={editForm.formState.errors.email?.message}
+            >
               <input
                 {...editForm.register('email')}
                 type="email"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="email@example.com"
               />
-              {editForm.formState.errors.email && (
-                <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.email.message}</p>
-              )}
             </FormField>
 
-            <FormField label="Số điện thoại">
+            <FormField 
+              label="Số điện thoại" 
+              layout="horizontal"
+              error={editForm.formState.errors.phone?.message}
+            >
               <input
                 {...editForm.register('phone')}
                 type="tel"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="0901234567"
               />
-              {editForm.formState.errors.phone && (
-                <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.phone.message}</p>
-              )}
             </FormField>
 
-            <FormField label="Ngày sinh">
+            <FormField label="Ngày sinh" layout="horizontal">
               <input
                 {...editForm.register('date_of_birth')}
                 type="date"
@@ -889,7 +1092,7 @@ export default function StudentsTabCrud({
               />
             </FormField>
 
-            <FormField label="Trạng thái">
+            <FormField label="Trạng thái" layout="horizontal">
               <select
                 {...editForm.register('status')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -902,7 +1105,7 @@ export default function StudentsTabCrud({
               </select>
             </FormField>
 
-            <FormField label="Địa chỉ" className="md:col-span-3">
+            <FormField label="Địa chỉ" layout="horizontal">
               <textarea
                 {...editForm.register('address')}
                 rows={1}
@@ -910,14 +1113,14 @@ export default function StudentsTabCrud({
                 placeholder="Nhập địa chỉ"
               />
             </FormField>
-          </FormGrid>
+          </div>
         </div>
 
         {/* Academic Information */}
         <div className="mb-4 border-t border-gray-200 pt-4">
           <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin học tập</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Chương trình mong muốn">
+          <div className="space-y-2">
+            <FormField label="Chương trình mong muốn" layout="horizontal">
               <select
                 {...editForm.register('program')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -931,7 +1134,7 @@ export default function StudentsTabCrud({
               </select>
             </FormField>
 
-            <FormField label="Trình độ tiếng Anh hiện tại">
+            <FormField label="Trình độ tiếng Anh hiện tại" layout="horizontal">
               <select
                 {...editForm.register('current_english_level')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -945,7 +1148,7 @@ export default function StudentsTabCrud({
               </select>
             </FormField>
 
-            <FormField label="Cơ sở mong muốn">
+            <FormField label="Cơ sở mong muốn" layout="horizontal">
               <input
                 {...editForm.register('expected_campus')}
                 type="text"
@@ -954,7 +1157,7 @@ export default function StudentsTabCrud({
               />
             </FormField>
 
-            <FormField label="Mô tả học sinh" className="md:col-span-3">
+            <FormField label="Mô tả học sinh" layout="horizontal">
               <textarea
                 {...editForm.register('student_description')}
                 rows={2}
@@ -962,14 +1165,14 @@ export default function StudentsTabCrud({
                 placeholder="Mô tả về học sinh, mục tiêu học tập, v.v."
               />
             </FormField>
-          </FormGrid>
+          </div>
         </div>
 
         {/* Parent Information */}
         <div className="mb-4 border-t border-gray-200 pt-4">
           <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin phụ huynh</h3>
-          <FormGrid columns={3} gap="md">
-            <FormField label="Tên phụ huynh">
+          <div className="space-y-2">
+            <FormField label="Tên phụ huynh" layout="horizontal">
               <input
                 {...editForm.register('parent_name')}
                 type="text"
@@ -978,7 +1181,7 @@ export default function StudentsTabCrud({
               />
             </FormField>
 
-            <FormField label="Số điện thoại phụ huynh">
+            <FormField label="Số điện thoại phụ huynh" layout="horizontal">
               <input
                 {...editForm.register('parent_phone')}
                 type="tel"
@@ -987,7 +1190,7 @@ export default function StudentsTabCrud({
               />
             </FormField>
 
-            <FormField label="Email phụ huynh">
+            <FormField label="Email phụ huynh" layout="horizontal">
               <input
                 {...editForm.register('parent_email')}
                 type="email"
@@ -995,13 +1198,13 @@ export default function StudentsTabCrud({
                 placeholder="email@example.com"
               />
             </FormField>
-          </FormGrid>
+          </div>
         </div>
 
         {/* Additional Information */}
         <div className="border-t border-gray-200 pt-4">
           <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin bổ sung</h3>
-          <FormField label="Ghi chú">
+          <FormField label="Ghi chú" layout="horizontal">
             <textarea
               {...editForm.register('notes')}
               rows={2}

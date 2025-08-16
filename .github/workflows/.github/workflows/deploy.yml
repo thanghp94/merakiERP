@@ -1,0 +1,45 @@
+name: Deploy Node.js App to Ubuntu VPS
+
+on:
+  push:
+    branches: [main]  # Trigger deploy on pushes to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install dependencies and build
+      run: |
+        npm install
+        npm run build || true
+
+    - name: Copy files to VPS via SCP with Password
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: 112.213.86.84
+        username: root
+        password: ${{ secrets.VPS_PASSWORD }}
+        port: 22
+        source: "."
+        target: "/root/your-app"           # Update this path to your VPS app folder
+
+    - name: Restart app on VPS with SSH using Password
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: 112.213.86.84
+        username: root
+        password: ${{ secrets.VPS_PASSWORD }}
+        port: 22
+        script: |
+          cd /root/your-app               # Update this to your deployed app folder
+          npm install --production
+          pm2 restart all || pm2 start index.js --name "myapp"  # Update "index.js" & app name as needed

@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
 

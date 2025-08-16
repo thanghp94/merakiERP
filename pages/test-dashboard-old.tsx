@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { TabType, ApiTestResult, Class, Facility, ProgramType, UnitOption, Employee, Student, Enrollment, Attendance, Finance, Task } from '../components/dashboard/shared/types';
 import { tabs, getNextSuggestedUnit } from '../components/dashboard/shared/utils';
-import FacilitiesTab from '../components/dashboard/FacilitiesTab';
-import ClassesTab from '../components/dashboard/ClassesTab';
-import EmployeesTab from '../components/dashboard/EmployeesTab';
-import StudentsTab from '../components/dashboard/StudentsTab';
-import SessionsTab from '../components/dashboard/SessionsTab';
-import AttendanceTab from '../components/dashboard/AttendanceTab';
-import FinancesTab from '../components/dashboard/FinancesTab';
-import TasksTab from '../components/dashboard/TasksTab';
-import ScheduleTab from '../components/dashboard/ScheduleTab';
-import ApiTestTab from '../components/dashboard/ApiTestTab';
-import UnitTransitionModal from '../components/dashboard/UnitTransitionModal';
-import ClassEnrollmentModal from '../components/dashboard/ClassEnrollmentModal';
+import FacilitiesTab from '../components/dashboard/tabs/facilities/FacilitiesTab';
+import ClassesTab from '../components/dashboard/tabs/classes/ClassesTab';
+import EmployeesTab from '../components/dashboard/tabs/employees/EmployeesTab';
+import StudentsTab from '../components/dashboard/tabs/students/StudentsTab';
+import SessionsTab from '../components/dashboard/tabs/sessions/SessionsTab';
+import AttendanceTab from '../components/dashboard/tabs/attendance/AttendanceTab';
+import FinancesTab from '../components/dashboard/tabs/finances/FinancesTab';
+import TasksTab from '../components/dashboard/tabs/tasks/TasksTab';
+import ScheduleTab from '../components/dashboard/tabs/schedule/ScheduleTab';
+import ApiTestTab from '../components/dashboard/tabs/api-test/ApiTestTab';
+import UnitTransitionModal from '../components/dashboard/tabs/personal/UnitTransitionModal';
+import ClassEnrollmentModal from '../components/dashboard/tabs/enrollments/ClassEnrollmentModal';
 
 export default function TestDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('facilities');

@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { FormModal, FormGrid, FormField } from './dashboard/shared';
 
 interface AttendanceFormProps {
   onSubmit: (attendanceData: any) => void;
+  onCancel?: () => void;
   initialData?: any;
   isEditing?: boolean;
+  isOpen?: boolean;
 }
 
 const AttendanceForm: React.FC<AttendanceFormProps> = ({ 
   onSubmit, 
+  onCancel,
   initialData = {}, 
-  isEditing = false 
+  isEditing = false,
+  isOpen = true
 }) => {
   const [formData, setFormData] = useState({
     session_id: initialData.session_id || '',
@@ -61,8 +66,7 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleModalSubmit = async () => {
     setIsSubmitting(true);
 
     try {
@@ -95,6 +99,12 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     }
   };
 
+  const handleModalCancel = () => {
+    if (onCancel) {
+      onCancel();
+    }
+  };
+
   const getSelectedSession = (): any => {
     return sessions.find((session: any) => session.id === formData.session_id);
   };
@@ -114,26 +124,29 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        {isEditing ? 'Chỉnh sửa điểm danh' : 'Điểm danh học sinh'}
-      </h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Session and Student Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="session_id" className="block text-sm font-medium text-gray-700 mb-1">
-              Buổi học *
-            </label>
+    <FormModal
+      isOpen={isOpen}
+      onClose={onCancel || (() => {})}
+      title={isEditing ? 'Chỉnh sửa điểm danh' : 'Điểm danh học sinh'}
+      onSubmit={handleModalSubmit}
+      onCancel={handleModalCancel}
+      submitLabel={isSubmitting ? 'Đang xử lý...' : (isEditing ? 'Cập nhật' : 'Điểm danh')}
+      cancelLabel={isEditing ? 'Hủy' : 'Xóa form'}
+      isSubmitting={isSubmitting || isLoadingData}
+      maxWidth="5xl"
+    >
+      {/* Session and Student Selection */}
+      <div className="mb-4">
+        <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin buổi học</h3>
+        <FormGrid columns={2} gap="md">
+          <FormField label="Buổi học" required>
             <select
-              id="session_id"
               name="session_id"
               value={formData.session_id}
               onChange={handleChange}
               required
               disabled={isLoadingData}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Chọn buổi học</option>
               {sessions.map((session: any) => (
@@ -142,20 +155,16 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="student_id" className="block text-sm font-medium text-gray-700 mb-1">
-              Học sinh *
-            </label>
+          <FormField label="Học sinh" required>
             <select
-              id="student_id"
               name="student_id"
               value={formData.student_id}
               onChange={handleChange}
               required
               disabled={isLoadingData}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Chọn học sinh</option>
               {students.map((student: any) => (
@@ -164,132 +173,100 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
+        </FormGrid>
+      </div>
+
+      {/* Selected Information Display */}
+      {(getSelectedSession() || getSelectedStudent()) && (
+        <div className="bg-gray-50 p-4 rounded-md mb-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Thông tin đã chọn:</h3>
+          {getSelectedSession() && (
+            <div className="text-sm text-gray-600 mb-2">
+              <strong>Buổi học:</strong> {getSelectedSession()?.classes?.class_name} - 
+              {new Date(getSelectedSession()?.session_date).toLocaleDateString('vi-VN')} - 
+              Giáo viên: {getSelectedSession()?.employees?.full_name}
+            </div>
+          )}
+          {getSelectedStudent() && (
+            <div className="text-sm text-gray-600">
+              <strong>Học sinh:</strong> {getSelectedStudent()?.full_name} - {getSelectedStudent()?.phone}
+            </div>
+          )}
         </div>
+      )}
 
-        {/* Selected Information Display */}
-        {(getSelectedSession() || getSelectedStudent()) && (
-          <div className="bg-gray-50 p-4 rounded-md">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Thông tin đã chọn:</h3>
-            {getSelectedSession() && (
-              <div className="text-sm text-gray-600 mb-2">
-                <strong>Buổi học:</strong> {getSelectedSession()?.classes?.class_name} - 
-                {new Date(getSelectedSession()?.session_date).toLocaleDateString('vi-VN')} - 
-                Giáo viên: {getSelectedSession()?.employees?.full_name}
-              </div>
-            )}
-            {getSelectedStudent() && (
-              <div className="text-sm text-gray-600">
-                <strong>Học sinh:</strong> {getSelectedStudent()?.full_name} - {getSelectedStudent()?.phone}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Attendance Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-              Trạng thái điểm danh *
-            </label>
+      {/* Attendance Details */}
+      <div className="mb-4 border-t border-gray-200 pt-4">
+        <h3 className="text-sm font-medium text-gray-800 mb-3">Chi tiết điểm danh</h3>
+        <FormGrid columns={2} gap="md">
+          <FormField label="Trạng thái điểm danh" required>
             <select
-              id="status"
               name="status"
               value={formData.status}
               onChange={handleChange}
               required
-              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${getStatusColor(formData.status)}`}
+              className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${getStatusColor(formData.status)}`}
             >
               <option value="present">Có mặt</option>
               <option value="absent">Vắng mặt</option>
               <option value="late">Đi muộn</option>
               <option value="excused">Nghỉ có phép</option>
             </select>
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="check_in_time" className="block text-sm font-medium text-gray-700 mb-1">
-              Thời gian check-in
-            </label>
+          <FormField label="Thời gian check-in">
             <input
               type="datetime-local"
-              id="check_in_time"
               name="check_in_time"
               value={formData.check_in_time}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             />
+          </FormField>
+        </FormGrid>
+      </div>
+
+      {/* Status Legend */}
+      <div className="bg-blue-50 p-4 rounded-md mb-4">
+        <h4 className="text-sm font-medium text-blue-800 mb-2">Ý nghĩa trạng thái:</h4>
+        <FormGrid columns={2} gap="sm">
+          <div className="flex items-center text-xs">
+            <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+            <span>Có mặt: Học sinh tham gia đầy đủ</span>
           </div>
-        </div>
-
-        {/* Status Legend */}
-        <div className="bg-blue-50 p-4 rounded-md">
-          <h4 className="text-sm font-medium text-blue-800 mb-2">Ý nghĩa trạng thái:</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center">
-              <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-              <span>Có mặt: Học sinh tham gia đầy đủ</span>
-            </div>
-            <div className="flex items-center">
-              <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-              <span>Vắng mặt: Không tham gia</span>
-            </div>
-            <div className="flex items-center">
-              <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-              <span>Đi muộn: Tham gia nhưng trễ giờ</span>
-            </div>
-            <div className="flex items-center">
-              <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-              <span>Nghỉ có phép: Xin phép trước</span>
-            </div>
+          <div className="flex items-center text-xs">
+            <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+            <span>Vắng mặt: Không tham gia</span>
           </div>
-        </div>
+          <div className="flex items-center text-xs">
+            <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+            <span>Đi muộn: Tham gia nhưng trễ giờ</span>
+          </div>
+          <div className="flex items-center text-xs">
+            <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+            <span>Nghỉ có phép: Xin phép trước</span>
+          </div>
+        </FormGrid>
+      </div>
 
-        {/* Notes */}
-        <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-            Ghi chú
-          </label>
-          <textarea
-            id="notes"
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Ghi chú về tình trạng điểm danh (tùy chọn)"
-          />
-        </div>
-
-        <div className="flex gap-4 pt-4">
-          <button
-            type="submit"
-            disabled={isSubmitting || isLoadingData}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Đang xử lý...' : (isEditing ? 'Cập nhật' : 'Điểm danh')}
-          </button>
-          
-          <button
-            type="button"
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            onClick={() => {
-              if (!isEditing) {
-                setFormData({
-                  session_id: '',
-                  student_id: '',
-                  status: 'present',
-                  check_in_time: new Date().toISOString().slice(0, 16),
-                  notes: ''
-                });
-              }
-            }}
-          >
-            {isEditing ? 'Hủy' : 'Xóa form'}
-          </button>
-        </div>
-      </form>
-    </div>
+      {/* Notes */}
+      <div className="border-t border-gray-200 pt-4">
+        <h3 className="text-sm font-medium text-gray-800 mb-3">Ghi chú bổ sung</h3>
+        <FormGrid columns={1} gap="md">
+          <FormField label="Ghi chú">
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={3}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="Ghi chú về tình trạng điểm danh (tùy chọn)"
+            />
+          </FormField>
+        </FormGrid>
+      </div>
+    </FormModal>
   );
 };
 

@@ -202,7 +202,7 @@ const RequestForm: React.FC<RequestFormProps> = ({
                   name="reason"
                   value={formData.reason}
                   onChange={handleInputChange}
-                  rows={3}
+                  rows={1}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   placeholder="Nhập lý do nghỉ phép..."
                 />
@@ -335,7 +335,6 @@ const RequestForm: React.FC<RequestFormProps> = ({
 
       {/* Basic Information */}
       <div>
-        <h3 className="text-sm font-medium text-gray-800 mb-3">Thông tin cơ bản</h3>
         <FormGrid columns={2} gap="md">
           <FormField label="Loại yêu cầu" required>
             <select
@@ -386,7 +385,7 @@ const RequestForm: React.FC<RequestFormProps> = ({
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                rows={3}
+                rows={1}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="Mô tả chi tiết về yêu cầu..."
               />

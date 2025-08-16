@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import ActionButton from './ActionButton';
-import { useEscapeKey } from '../../../lib/hooks/useEscapeKey';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 
 export interface FormModalProps {
   isOpen: boolean;
@@ -135,7 +135,7 @@ export default function FormModal({
 
             {/* Content - Scrollable */}
             <div className="flex-1 overflow-y-auto min-h-0">
-              <form onSubmit={handleSubmit} className="p-4 sm:p-6">
+              <form onSubmit={handleSubmit} className="p-3 sm:p-4">
                 <div className="text-sm">
                   {children}
                 </div>
@@ -173,9 +173,9 @@ export function FormGrid({
     };
     
     const gapClasses = {
-      sm: 'gap-3',
-      md: 'gap-4',
-      lg: 'gap-6'
+      sm: 'gap-2',
+      md: 'gap-3',
+      lg: 'gap-4'
     };
     
     return `grid ${columnClasses[columns]} ${gapClasses[gap]}`;
@@ -195,6 +195,7 @@ export interface FormFieldProps {
   required?: boolean;
   error?: string;
   className?: string;
+  layout?: 'vertical' | 'horizontal';
 }
 
 export function FormField({ 
@@ -202,8 +203,27 @@ export function FormField({
   children, 
   required = false, 
   error,
-  className = '' 
+  className = '',
+  layout = 'vertical'
 }: FormFieldProps) {
+  if (layout === 'horizontal') {
+    return (
+      <div className={`flex items-center space-x-3 ${className}`}>
+        <label className="text-xs font-medium text-gray-700 whitespace-nowrap min-w-0 flex-shrink-0">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        <div className="flex-1 min-w-0">
+          {children}
+          {error && (
+            <p className="text-xs text-red-600 mt-1">{error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Default vertical layout
   return (
     <div className={`space-y-1 ${className}`}>
       <label className="block text-xs font-medium text-gray-700">

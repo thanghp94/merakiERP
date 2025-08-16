@@ -11,8 +11,8 @@ import {
   FormGrid, 
   FormField 
 } from '../shared';
-import { useFormWithValidation, commonSchemas, createFormData } from '../../../lib/hooks/useFormWithValidation';
-import { Badge } from '../../ui';
+import { useFormWithValidation, commonSchemas, createFormData } from '@/hooks/useFormWithValidation';
+import { Badge } from '@/components/ui';
 
 interface TasksTabCrudProps {
   tasks: BusinessTask[];

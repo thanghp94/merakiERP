@@ -1,5 +1,9 @@
 import React from 'react';
-import { useEmployees, useTeachers, useTeachingAssistants } from '../../../../lib/hooks/useApiData';
+import { 
+  useEmployees as useAllEmployees, 
+  useTeachers as useTeachersList, 
+  useTeachingAssistants as useAssistantsList 
+} from '@/hooks/useApiData';
 
 interface EmployeeSelectorProps {
   value: string;
@@ -22,10 +26,10 @@ export default function EmployeeSelector({
   className = '',
   name,
 }: EmployeeSelectorProps) {
-  // Use appropriate hook based on type
-  const { data: allEmployees, isLoading: loadingAll } = useEmployees();
-  const { data: teachers, isLoading: loadingTeachers } = useTeachers();
-  const { data: assistants, isLoading: loadingAssistants } = useTeachingAssistants();
+  // Use appropriate hook based on type with renamed imports
+  const { data: allEmployees, isLoading: loadingAll } = useAllEmployees();
+  const { data: teachers, isLoading: loadingTeachers } = useTeachersList();
+  const { data: assistants, isLoading: loadingAssistants } = useAssistantsList();
 
   // Select appropriate data and loading state
   let employees, isLoading;
