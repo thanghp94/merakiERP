@@ -22,6 +22,17 @@ jobs:
         npm install
         npm run build || true
 
+
+ # THÊM BƯỚC NÀY VÀO
+    - name: Create app directory on VPS
+      uses: appleboy/ssh-action@master
+      with:
+       host: 112.213.86.84
+       username: root
+       password: ${{ secrets.VPS_PASSWORD }}
+       port: 22
+       script: 'mkdir -p /root/MerakiERP'  # Lệnh để tạo thư mục
+
     - name: Copy files to VPS via SCP with Password
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -30,7 +41,7 @@ jobs:
         password: ${{ secrets.VPS_PASSWORD }}
         port: 22
         source: "."
-        target: "/root/your-app"           # Update this path to your VPS app folder
+        target: "/root/MerakiERP"           # Update this path to your VPS app folder
 
     - name: Restart app on VPS with SSH using Password
       uses: appleboy/ssh-action@v1.0.0
@@ -40,6 +51,6 @@ jobs:
         password: ${{ secrets.VPS_PASSWORD }}
         port: 22
         script: |
-          cd /root/your-app               # Update this to your deployed app folder
+          cd /root/MerakiERP               # Update this to your deployed app folder
           npm install --production
-          pm2 restart all || pm2 start index.js --name "myapp"  # Update "index.js" & app name as needed
+          pm2 restart all || pm2 start index.js --name "MerakiERP"  # Update "index.js" & app name as needed
