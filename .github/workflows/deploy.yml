@@ -2,7 +2,7 @@ name: Deploy Node.js App to Ubuntu VPS
 
 on:
   push:
-    branches: [main]  # Trigger deploy on pushes to main branch
+    branches: [temp/students-crud-with-invoice-debug]  # Trigger deploy on pushes to current branch
 
 jobs:
   deploy:
