@@ -6,6 +6,7 @@ export interface SubTab {
   id: TabType;
   label: string;
   icon: string;
+  link?: string;
 }
 
 export interface MainTab {

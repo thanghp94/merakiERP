@@ -8,15 +8,13 @@ import { tabs, getNextSuggestedUnit } from '@/shared/utils';
 import { Button, Card, Badge } from '@/components/ui';
 import Sidebar from '@/dashboard/shared/Sidebar';
 import PersonalTabWithSidebar from '@/dashboard/tabs/personal/PersonalTabWithSidebar';
-import { FacilitiesTabCrud } from '@/dashboard/crud';
-import FacilityDetailModal from '@/dashboard/tabs/facilities/FacilityDetailModal';
+import { getMainTabs, handleSubTabNavigation } from '@/components/navigation/NavigationConfig';
 
 
-import SessionsTab from '@/dashboard/tabs/sessions/SessionsTab';
+
 import AttendanceTab from '@/dashboard/tabs/attendance/AttendanceTab';
-import InvoicesTab from '@/dashboard/tabs/invoices/InvoicesTab';
-import PayrollTab from '@/dashboard/tabs/payroll/PayrollTab';
-import TasksTab from '@/dashboard/tabs/tasks/TasksTab';
+
+
 import BusinessTasksTab from '@/dashboard/tabs/tasks/BusinessTasksTab';
 import ScheduleTab from '@/dashboard/tabs/schedule/ScheduleTab';
 import ApiTestTab from '@/dashboard/tabs/api-test/ApiTestTab';
@@ -61,55 +59,11 @@ export default function Dashboard() {
   }, [activeMainTab]);
 
   // Define the hierarchical navigation structure
-  const mainTabs: MainTab[] = [
-    {
-      id: 'vanhanh',
-      label: 'Vận hành',
-      icon: '⚙️',
-      subtabs: [
-        { id: 'classes', label: 'Lớp học', icon: '🏫' },
-        { id: 'sessions', label: 'Buổi học', icon: '📚' },
-        { id: 'schedule', label: 'Lịch học', icon: '📅' }
-      ]
-    },
-    {
-      id: 'khachhang',
-      label: 'Khách hàng',
-      icon: '👥',
-      subtabs: [
-        { id: 'admissions', label: 'Tuyển sinh', icon: '📋' },
-        { id: 'students', label: 'Học sinh', icon: '🎓' }
-      ]
-    },
-    {
-      id: 'taichinh',
-      label: 'Tài chính',
-      icon: '💰',
-      subtabs: [
-        { id: 'finances', label: 'Tài chính', icon: '💳' },
-        { id: 'payroll', label: 'Lương', icon: '💰' }
-      ]
-    },
-    {
-      id: 'hcns',
-      label: 'HCNS',
-      icon: '👤',
-      subtabs: [
-        { id: 'employees', label: 'Nhân viên', icon: '👨‍💼' },
-        { id: 'requests', label: 'Yêu cầu', icon: '📋' },
-        { id: 'tasks', label: 'Bài tập', icon: '📝' },
-        { id: 'business-tasks', label: 'Công việc', icon: '💼' },
-        { id: 'facilities', label: 'Cơ sở', icon: '🏢' }
-      ]
-    }
-  ];
+  const mainTabs: MainTab[] = getMainTabs();
 
 
 
-  // Facilities management state
-  const [showFacilityForm, setShowFacilityForm] = useState(false);
-  const [facilitiesList, setFacilitiesList] = useState<Facility[]>([]);
-  const [isLoadingFacilitiesList, setIsLoadingFacilitiesList] = useState(false);
+
 
 
 
@@ -126,54 +80,27 @@ export default function Dashboard() {
   const [finances, setFinances] = useState<Finance[]>([]);
   const [isLoadingFinances, setIsLoadingFinances] = useState(false);
 
-  // Tasks management state
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([]);
+
 
   // Admissions management state
   const [showAdmissionForm, setShowAdmissionForm] = useState(false);
   const [admissions, setAdmissions] = useState<Admission[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
 
-  // Detail modal states
-  const [showFacilityDetail, setShowFacilityDetail] = useState(false);
-  const [selectedFacilityForDetail, setSelectedFacilityForDetail] = useState<Facility | null>(null);
+
 
 
   useEffect(() => {
-    if (activeTab === 'facilities') {
-      fetchFacilitiesList();
-    } else if (activeTab === 'sessions') {
+    if (activeTab === 'sessions') {
       // Sessions tab handles its own data fetching
     } else if (activeTab === 'attendance') {
       fetchAttendances();
     } else if (activeTab === 'finances') {
       fetchFinances();
-    } else if (activeTab === 'tasks') {
-      fetchTasks();
     }
   }, [activeTab]);
 
-  // Fetch functions
-  const fetchFacilitiesList = async () => {
-    setIsLoadingFacilitiesList(true);
-    try {
-      const response = await fetch('/api/facilities');
-      const result = await response.json();
 
-      if (result.success) {
-        setFacilitiesList(result.data);
-      } else {
-        console.error('Failed to fetch facilities list:', result.message);
-        setFacilitiesList([]);
-      }
-    } catch (error) {
-      console.error('Error fetching facilities list:', error);
-      setFacilitiesList([]);
-    } finally {
-      setIsLoadingFacilitiesList(false);
-    }
-  };
 
 
 
@@ -221,25 +148,7 @@ export default function Dashboard() {
     }
   };
 
-  const fetchTasks = async () => {
-    setIsLoadingTasks(true);
-    try {
-      const response = await fetch('/api/tasks');
-      const result = await response.json();
-      
-      if (result.success) {
-        setTasks(result.data);
-      } else {
-        console.error('Failed to fetch tasks:', result.message);
-        setTasks([]);
-      }
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      setTasks([]);
-    } finally {
-      setIsLoadingTasks(false);
-    }
-  };
+  // Removed fetchTasks and related state management as tasks moved to separate page
 
 
 
@@ -312,7 +221,15 @@ export default function Dashboard() {
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
-    setActiveTab(subTabId);
+    // For tabs that still exist in dashboard (like attendance, schedule, api-test)
+    const dashboardTabs = ['attendance', 'schedule', 'api-test'];
+
+    if (dashboardTabs.includes(subTabId)) {
+      setActiveTab(subTabId);
+    } else {
+      // Use centralized navigation handler for other tabs
+      handleSubTabNavigation(subTabId, window.location.pathname);
+    }
   };
 
   const handleMobileMenuClose = () => {
@@ -330,20 +247,12 @@ export default function Dashboard() {
       const isEdit = data.id;
       
       switch (formType) {
-        case 'Facility':
-          endpoint = isEdit ? `/api/facilities/${data.id}` : '/api/facilities';
-          method = isEdit ? 'PUT' : 'POST';
-          break;
         case 'Attendance':
           endpoint = isEdit ? `/api/attendance/${data.id}` : '/api/attendance';
           method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Finance':
           endpoint = isEdit ? `/api/finances/${data.id}` : '/api/finances';
-          method = isEdit ? 'PUT' : 'POST';
-          break;
-        case 'Task':
-          endpoint = isEdit ? `/api/tasks/${data.id}` : '/api/tasks';
           method = isEdit ? 'PUT' : 'POST';
           break;
         case 'Admission':
@@ -370,18 +279,12 @@ export default function Dashboard() {
         console.log(`${formType} ${action}d successfully:`, result);
         
         // Refresh lists when items are added/updated
-        if (formType === 'Facility') {
-          setShowFacilityForm(false);
-          fetchFacilitiesList();
-        } else if (formType === 'Attendance') {
+        if (formType === 'Attendance') {
           setShowAttendanceForm(false);
           fetchAttendances();
         } else if (formType === 'Finance') {
           setShowFinanceForm(false);
           fetchFinances();
-        } else if (formType === 'Task') {
-          setShowTaskForm(false);
-          fetchTasks();
         } else if (formType === 'Admission') {
           setShowAdmissionForm(false);
           // Refresh admissions will be handled by the AdmissionsTab component
@@ -412,52 +315,49 @@ export default function Dashboard() {
     }
   };
 
-  // Detail view handlers
-  const handleFacilityView = (facility: Facility) => {
-    setSelectedFacilityForDetail(facility);
-    setShowFacilityDetail(true);
-  };
 
 
 
-  // Facility CRUD handlers
-  const handleFacilityDelete = async (facility: Facility) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa cơ sở "${facility.name}"?`)) {
-      return;
-    }
 
-    try {
-      const response = await fetch(`/api/facilities/${facility.id}`, {
-        method: 'DELETE',
-      });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        alert('Cơ sở đã được xóa thành công!');
-        fetchFacilitiesList(); // Refresh the list
-      } else {
-        throw new Error(result.message || 'Failed to delete facility');
-      }
-    } catch (error) {
-      console.error('Error deleting facility:', error);
-      alert(`Lỗi khi xóa cơ sở: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'personal':
-        return <PersonalTabWithSidebar />;
+        return (
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Cá nhân</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý cá nhân đã được chuyển sang trang riêng.</p>
+            <a
+              href="/personal"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Cá nhân
+            </a>
+          </div>
+        );
       case 'facilities':
         return (
-          <FacilitiesTabCrud
-            facilities={facilitiesList}
-            isLoading={isLoadingFacilitiesList}
-            onSubmit={handleFormSubmit}
-            onView={handleFacilityView}
-            onDelete={handleFacilityDelete}
-          />
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0h3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Cơ sở</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý cơ sở đã được chuyển sang trang riêng.</p>
+            <a
+              href="/facilities"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Cơ sở
+            </a>
+          </div>
         );
       case 'classes':
         return (
@@ -481,7 +381,23 @@ export default function Dashboard() {
         return <div>Employee management has been moved to <a href="/employee" className="text-blue-500 underline">/employee</a> page</div>;
 
       case 'sessions':
-        return <SessionsTab />;
+        return (
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Buổi học</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý buổi học đã được chuyển sang trang riêng.</p>
+            <a
+              href="/sessions"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Buổi học
+            </a>
+          </div>
+        );
       case 'attendance':
         return (
           <AttendanceTab
@@ -493,30 +409,114 @@ export default function Dashboard() {
           />
         );
       case 'finances':
-        return <InvoicesTab />;
+        return (
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Tài chính</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý tài chính đã được chuyển sang trang riêng.</p>
+            <a
+              href="/finances"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Tài chính
+            </a>
+          </div>
+        );
       case 'payroll':
-        return <PayrollTab />;
+        return (
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Lương</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý lương đã được chuyển sang trang riêng.</p>
+            <a
+              href="/payroll"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Lương
+            </a>
+          </div>
+        );
       case 'tasks':
         return (
-          <TasksTab
-            showTaskForm={showTaskForm}
-            setShowTaskForm={setShowTaskForm}
-            tasks={tasks}
-            isLoadingTasks={isLoadingTasks}
-            handleFormSubmit={handleFormSubmit}
-          />
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Bài tập</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý bài tập đã được chuyển sang trang cá nhân.</p>
+            <a
+              href="/personal"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Cá nhân
+            </a>
+          </div>
         );
       case 'business-tasks':
-        return <BusinessTasksTab employees={[]} />;
+        return (
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Công việc</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý công việc đã được chuyển sang trang riêng.</p>
+            <a
+              href="/businesstask"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Công việc
+            </a>
+          </div>
+        );
       case 'schedule':
         return <ScheduleTab />;
       case 'requests':
-        return <RequestsTab employees={[]} />;
+        return (
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Yêu cầu</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý yêu cầu đã được chuyển sang trang riêng.</p>
+            <a
+              href="/requests"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Yêu cầu
+            </a>
+          </div>
+        );
       case 'admissions':
         return (
-          <AdmissionsTab
-            onAddAdmission={() => setShowAdmissionForm(true)}
-          />
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Tuyển sinh</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý tuyển sinh đã được chuyển sang trang riêng.</p>
+            <a
+              href="/admissions"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Tuyển sinh
+            </a>
+          </div>
         );
       case 'api-test':
         return (
@@ -599,15 +599,7 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Detail View Modals */}
-      <FacilityDetailModal
-        isOpen={showFacilityDetail}
-        onClose={() => {
-          setShowFacilityDetail(false);
-          setSelectedFacilityForDetail(null);
-        }}
-        facility={selectedFacilityForDetail}
-      />
+
 
       {/* Removed EmployeeDetailModal as employee management moved to /employee page */}
 

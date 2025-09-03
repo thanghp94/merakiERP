@@ -1,0 +1,325 @@
+import { useState, useEffect } from 'react';
+import Head from 'next/head';
+import { useAuth } from '@/auth/AuthContext';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { TabType, MainTabType, MainTab, Facility } from '@/shared/types';
+import { Card } from '@/components/ui';
+import Sidebar from '@/dashboard/shared/Sidebar';
+import FacilitiesTabCrud from '@/dashboard/crud/FacilitiesTabCrud';
+import FacilityDetailModal from '@/dashboard/tabs/facilities/FacilityDetailModal';
+
+export default function FacilitiesPage() {
+  const { user, signOut } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabType>('facilities');
+  const [activeMainTab, setActiveMainTab] = useState<MainTabType>('hcns');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Facilities management state
+  const [facilitiesList, setFacilitiesList] = useState<Facility[]>([]);
+  const [isLoadingFacilitiesList, setIsLoadingFacilitiesList] = useState(false);
+  const [showFacilityDetail, setShowFacilityDetail] = useState(false);
+  const [selectedFacilityForDetail, setSelectedFacilityForDetail] = useState<Facility | null>(null);
+
+  // Define the hierarchical navigation structure (same as dashboard)
+  const mainTabs: MainTab[] = [
+    {
+      id: 'vanhanh',
+      label: 'Vận hành',
+      icon: '⚙️',
+      subtabs: [
+        { id: 'classes', label: 'Lớp học', icon: '🏫' },
+        { id: 'sessions', label: 'Buổi học', icon: '📚' },
+        { id: 'schedule', label: 'Lịch học', icon: '📅' }
+      ]
+    },
+    {
+      id: 'khachhang',
+      label: 'Khách hàng',
+      icon: '👥',
+      subtabs: [
+        { id: 'admissions', label: 'Tuyển sinh', icon: '📋' },
+        { id: 'students', label: 'Học sinh', icon: '🎓' }
+      ]
+    },
+    {
+      id: 'taichinh',
+      label: 'Tài chính',
+      icon: '💰',
+      subtabs: [
+        { id: 'finances', label: 'Tài chính', icon: '💳' },
+        { id: 'payroll', label: 'Lương', icon: '💰' }
+      ]
+    },
+    {
+      id: 'hcns',
+      label: 'HCNS',
+      icon: '👤',
+      subtabs: [
+        { id: 'employees', label: 'Nhân viên', icon: '👨‍💼' },
+        { id: 'requests', label: 'Yêu cầu', icon: '📋' },
+        { id: 'tasks', label: 'Bài tập', icon: '📝' },
+        { id: 'business-tasks', label: 'Công việc', icon: '💼' },
+        { id: 'facilities', label: 'Cơ sở', icon: '🏢' }
+      ]
+    }
+  ];
+
+  // Load saved tab state from localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedActiveTab = localStorage.getItem('facilities-active-tab') as TabType;
+      const savedActiveMainTab = localStorage.getItem('facilities-active-main-tab') as MainTabType;
+
+      if (savedActiveTab) {
+        setActiveTab(savedActiveTab);
+      }
+      if (savedActiveMainTab) {
+        setActiveMainTab(savedActiveMainTab);
+      }
+    }
+  }, []);
+
+  // Save tab state to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('facilities-active-tab', activeTab);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('facilities-active-main-tab', activeMainTab);
+    }
+  }, [activeMainTab]);
+
+  // Load facilities on component mount
+  useEffect(() => {
+    fetchFacilitiesList();
+  }, []);
+
+  const fetchFacilitiesList = async () => {
+    setIsLoadingFacilitiesList(true);
+    try {
+      const response = await fetch('/api/facilities');
+      const result = await response.json();
+
+      if (result.success) {
+        setFacilitiesList(result.data);
+      } else {
+        console.error('Failed to fetch facilities list:', result.message);
+        setFacilitiesList([]);
+      }
+    } catch (error) {
+      console.error('Error fetching facilities list:', error);
+      setFacilitiesList([]);
+    } finally {
+      setIsLoadingFacilitiesList(false);
+    }
+  };
+
+  const handleFormSubmit = async (data: any, formType: string) => {
+    console.log(`${formType} form submitted:`, data);
+
+    try {
+      let endpoint = '';
+      let method = 'POST';
+
+      // Check if this is an edit operation (data has an id)
+      const isEdit = data.id;
+
+      switch (formType) {
+        case 'Facility':
+          endpoint = isEdit ? `/api/facilities/${data.id}` : '/api/facilities';
+          method = isEdit ? 'PUT' : 'POST';
+          break;
+        default:
+          throw new Error(`Unknown form type: ${formType}`);
+      }
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        const action = isEdit ? 'cập nhật' : 'lưu';
+        alert(`${formType} đã được ${action} thành công!`);
+        console.log(`${formType} ${action}d successfully:`, result);
+
+        // Refresh facilities list
+        fetchFacilitiesList();
+
+        const apiResult = {
+          endpoint,
+          method,
+          status: response.status,
+          data: result,
+        };
+        console.log('API Result:', apiResult);
+      } else {
+        throw new Error(result.message || 'Failed to save data');
+      }
+    } catch (error) {
+      console.error(`Error saving ${formType}:`, error);
+      alert(`Lỗi khi lưu ${formType}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Detail view handlers
+  const handleFacilityView = (facility: Facility) => {
+    setSelectedFacilityForDetail(facility);
+    setShowFacilityDetail(true);
+  };
+
+  // Facility CRUD handlers
+  const handleFacilityDelete = async (facility: Facility) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa cơ sở "${facility.name}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/facilities/${facility.id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert('Cơ sở đã được xóa thành công!');
+        fetchFacilitiesList(); // Refresh the list
+      } else {
+        throw new Error(result.message || 'Failed to delete facility');
+      }
+    } catch (error) {
+      console.error('Error deleting facility:', error);
+      alert(`Lỗi khi xóa cơ sở: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Navigation helper functions
+  const handleMainTabClick = (mainTabId: MainTabType) => {
+    setActiveMainTab(mainTabId);
+    // Set the first subtab as active when switching main tabs
+    const mainTab = mainTabs.find(tab => tab.id === mainTabId);
+    if (mainTab && mainTab.subtabs.length > 0) {
+      setActiveTab(mainTab.subtabs[0].id);
+    }
+  };
+
+  const handleSubTabClick = (subTabId: TabType) => {
+    setActiveTab(subTabId);
+  };
+
+  const handleMobileMenuClose = () => {
+    setMobileMenuOpen(false);
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'facilities':
+        return (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Quản lý Cơ sở</h2>
+                <p className="text-gray-600">Quản lý các cơ sở đào tạo và phòng học</p>
+              </div>
+            </div>
+
+            <FacilitiesTabCrud
+              facilities={facilitiesList}
+              isLoading={isLoadingFacilitiesList}
+              onSubmit={handleFormSubmit}
+              onView={handleFacilityView}
+              onDelete={handleFacilityDelete}
+            />
+          </div>
+        );
+      default:
+        return (
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0h3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Chức năng đang phát triển</h3>
+            <p className="text-gray-500 mb-4">Chức năng này sẽ được phát triển trong tương lai.</p>
+            <a
+              href="/dashboard"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Quay lại Dashboard
+            </a>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <ProtectedRoute>
+      <Head>
+        <title>Quản lý Cơ sở - MerakiERP</title>
+        <meta name="description" content="Quản lý các cơ sở đào tạo và phòng học" />
+      </Head>
+
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-teal-50 flex">
+        {/* Sidebar */}
+        <Sidebar
+          mainTabs={mainTabs}
+          activeMainTab={activeMainTab}
+          activeTab={activeTab}
+          onMainTabClick={handleMainTabClick}
+          onSubTabClick={handleSubTabClick}
+          isMobileMenuOpen={mobileMenuOpen}
+          onMobileMenuClose={handleMobileMenuClose}
+        />
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col lg:ml-0">
+          {/* Mobile Header */}
+          <header className="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-teal-500 rounded-lg flex items-center justify-center shadow-md">
+              <span className="text-white text-sm font-bold">M</span>
+            </div>
+            <h1 className="text-lg font-bold bg-gradient-to-r from-orange-600 to-teal-500 bg-clip-text text-transparent">
+              MerakiERP - Cơ sở
+            </h1>
+
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 p-4 lg:p-6">
+            <Card className="h-full overflow-hidden shadow-xl" shadow="lg" padding="sm">
+              {renderTabContent()}
+            </Card>
+          </main>
+        </div>
+      </div>
+
+      {/* Detail View Modals */}
+      <FacilityDetailModal
+        isOpen={showFacilityDetail}
+        onClose={() => {
+          setShowFacilityDetail(false);
+          setSelectedFacilityForDetail(null);
+        }}
+        facility={selectedFacilityForDetail}
+      />
+    </ProtectedRoute>
+  );
+}
