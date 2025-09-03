@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import EmployeesTabCrud from '../../crud/EmployeesTabCrud_comprehensive';
+import EmployeesTabCrud from './EmployeesCrudContainer';
 import WorkScheduleModal from './WorkScheduleModal';
 import { Employee } from '../../shared/types';
 

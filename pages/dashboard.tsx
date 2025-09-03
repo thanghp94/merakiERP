@@ -10,10 +10,7 @@ import Sidebar from '@/dashboard/shared/Sidebar';
 import PersonalTabWithSidebar from '@/dashboard/tabs/personal/PersonalTabWithSidebar';
 import { FacilitiesTabCrud } from '@/dashboard/crud';
 import FacilityDetailModal from '@/dashboard/tabs/facilities/FacilityDetailModal';
-import EmployeeDetailModal from '@/dashboard/tabs/employees/EmployeeDetailModal';
 
-import ClassesTab from '@/dashboard/tabs/classes/ClassesTab';
-import EmployeesTab from '@/dashboard/tabs/employees/EmployeesTab';
 
 import SessionsTab from '@/dashboard/tabs/sessions/SessionsTab';
 import AttendanceTab from '@/dashboard/tabs/attendance/AttendanceTab';
@@ -24,8 +21,6 @@ import BusinessTasksTab from '@/dashboard/tabs/tasks/BusinessTasksTab';
 import ScheduleTab from '@/dashboard/tabs/schedule/ScheduleTab';
 import ApiTestTab from '@/dashboard/tabs/api-test/ApiTestTab';
 import AdmissionsTab from '@/dashboard/tabs/admissions/AdmissionsTab';
-import UnitTransitionModal from '@/dashboard/tabs/classes/UnitTransitionModal';
-import ClassEnrollmentModal from '@/dashboard/tabs/enrollments/ClassEnrollmentModal';
 import AdmissionForm from '@/components/AdmissionForm';
 import RequestsTab from '@/dashboard/tabs/requests/RequestsTab';
 
@@ -109,42 +104,14 @@ export default function Dashboard() {
     }
   ];
 
-  // Classes management state
-  const [showClassForm, setShowClassForm] = useState(false);
-  const [selectedClassForLesson, setSelectedClassForLesson] = useState<string | null>(null);
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [facilities, setFacilities] = useState<Facility[]>([]);
-  const [programTypes, setProgramTypes] = useState<ProgramType[]>([]);
-  const [grapeSeedUnits, setGrapeSeedUnits] = useState<UnitOption[]>([]);
-  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
-  const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
-  const [isLoadingPrograms, setIsLoadingPrograms] = useState(false);
-  
-  // Filter states for classes
-  const [selectedFacility, setSelectedFacility] = useState('');
-  const [selectedProgram, setSelectedProgram] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('active'); // Default to active
 
-  // Unit transition states
-  const [showUnitTransitionModal, setShowUnitTransitionModal] = useState(false);
-  const [selectedClassForTransition, setSelectedClassForTransition] = useState<Class | null>(null);
-  const [newUnit, setNewUnit] = useState('');
-  const [transitionDate, setTransitionDate] = useState('');
-  const [isSubmittingTransition, setIsSubmittingTransition] = useState(false);
-
-  // Class enrollment states
-  const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
-  const [selectedClassForEnrollment, setSelectedClassForEnrollment] = useState<Class | null>(null);
 
   // Facilities management state
   const [showFacilityForm, setShowFacilityForm] = useState(false);
   const [facilitiesList, setFacilitiesList] = useState<Facility[]>([]);
   const [isLoadingFacilitiesList, setIsLoadingFacilitiesList] = useState(false);
 
-  // Employees management state
-  const [showEmployeeForm, setShowEmployeeForm] = useState(false);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+
 
 
 
@@ -171,19 +138,11 @@ export default function Dashboard() {
   // Detail modal states
   const [showFacilityDetail, setShowFacilityDetail] = useState(false);
   const [selectedFacilityForDetail, setSelectedFacilityForDetail] = useState<Facility | null>(null);
-  const [showEmployeeDetail, setShowEmployeeDetail] = useState(false);
-  const [selectedEmployeeForDetail, setSelectedEmployeeForDetail] = useState<Employee | null>(null);
+
 
   useEffect(() => {
-    if (activeTab === 'classes') {
-      fetchClasses();
-      fetchFacilitiesForClasses();
-      fetchProgramTypes();
-      fetchGrapeSeedUnits();
-    } else if (activeTab === 'facilities') {
+    if (activeTab === 'facilities') {
       fetchFacilitiesList();
-    } else if (activeTab === 'employees') {
-      fetchEmployees();
     } else if (activeTab === 'sessions') {
       // Sessions tab handles its own data fetching
     } else if (activeTab === 'attendance') {
@@ -193,111 +152,15 @@ export default function Dashboard() {
     } else if (activeTab === 'tasks') {
       fetchTasks();
     }
-  }, [activeTab, selectedFacility, selectedProgram, selectedStatus]);
+  }, [activeTab]);
 
   // Fetch functions
-  const fetchClasses = async () => {
-    setIsLoadingClasses(true);
-    try {
-      let url = '/api/classes';
-      const params = new URLSearchParams();
-      
-      // Add status filter (default to active if not specified)
-      if (selectedStatus) {
-        params.append('status', selectedStatus);
-      } else {
-        params.append('status', 'active');
-      }
-      
-      if (selectedFacility) {
-        params.append('facility_id', selectedFacility);
-      }
-
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
-      const response = await fetch(url);
-      const result = await response.json();
-      
-      if (result.success) {
-        let filteredClasses = result.data;
-        
-        if (selectedProgram) {
-          filteredClasses = result.data.filter((cls: Class) => 
-            cls.data?.program_type === selectedProgram
-          );
-        }
-        
-        setClasses(filteredClasses);
-      } else {
-        console.error('Failed to fetch classes:', result.message);
-        setClasses([]);
-      }
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-      setClasses([]);
-    } finally {
-      setIsLoadingClasses(false);
-    }
-  };
-
-  const fetchFacilitiesForClasses = async () => {
-    setIsLoadingFacilities(true);
-    try {
-      const response = await fetch('/api/facilities');
-      const result = await response.json();
-      
-      if (result.success) {
-        setFacilities(result.data);
-      } else {
-        console.error('Failed to fetch facilities:', result.message);
-      }
-    } catch (error) {
-      console.error('Error fetching facilities:', error);
-    } finally {
-      setIsLoadingFacilities(false);
-    }
-  };
-
-  const fetchProgramTypes = async () => {
-    setIsLoadingPrograms(true);
-    try {
-      const response = await fetch('/api/metadata/enums?type=program_type');
-      const result = await response.json();
-      
-      if (result.success) {
-        setProgramTypes(result.data);
-      } else {
-        console.error('Failed to fetch program types:', result.message);
-        setProgramTypes([
-          { value: 'GrapeSEED', label: 'GrapeSEED' },
-          { value: 'Pre-WSC', label: 'Pre-WSC' },
-          { value: 'WSC', label: 'WSC' },
-          { value: 'Tiếng Anh Tiểu Học', label: 'Tiếng Anh Tiểu Học' },
-          { value: 'Gavel club', label: 'Gavel club' }
-        ]);
-      }
-    } catch (error) {
-      console.error('Error fetching program types:', error);
-      setProgramTypes([
-        { value: 'GrapeSEED', label: 'GrapeSEED' },
-        { value: 'Pre-WSC', label: 'Pre-WSC' },
-        { value: 'WSC', label: 'WSC' },
-        { value: 'Tiếng Anh Tiểu Học', label: 'Tiếng Anh Tiểu Học' },
-        { value: 'Gavel club', label: 'Gavel club' }
-      ]);
-    } finally {
-      setIsLoadingPrograms(false);
-    }
-  };
-
   const fetchFacilitiesList = async () => {
     setIsLoadingFacilitiesList(true);
     try {
       const response = await fetch('/api/facilities');
       const result = await response.json();
-      
+
       if (result.success) {
         setFacilitiesList(result.data);
       } else {
@@ -312,25 +175,7 @@ export default function Dashboard() {
     }
   };
 
-  const fetchEmployees = async () => {
-    setIsLoadingEmployees(true);
-    try {
-      const response = await fetch('/api/employees');
-      const result = await response.json();
-      
-      if (result.success) {
-        setEmployees(result.data);
-      } else {
-        console.error('Failed to fetch employees:', result.message);
-        setEmployees([]);
-      }
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      setEmployees([]);
-    } finally {
-      setIsLoadingEmployees(false);
-    }
-  };
+
 
 
 
@@ -396,97 +241,7 @@ export default function Dashboard() {
     }
   };
 
-  const fetchGrapeSeedUnits = async () => {
-    try {
-      const response = await fetch('/api/metadata/enums?type=unit_grapeseed');
-      const result = await response.json();
-      
-      if (result.success) {
-        setGrapeSeedUnits(result.data);
-      } else {
-        console.error('Failed to fetch GrapeSEED units:', result.message);
-        const fallbackUnits = [];
-        for (let i = 1; i <= 30; i++) {
-          fallbackUnits.push({ value: `U${i}`, label: `Unit ${i}` });
-        }
-        setGrapeSeedUnits(fallbackUnits);
-      }
-    } catch (error) {
-      console.error('Error fetching GrapeSEED units:', error);
-      const fallbackUnits = [];
-      for (let i = 1; i <= 30; i++) {
-        fallbackUnits.push({ value: `U${i}`, label: `Unit ${i}` });
-      }
-      setGrapeSeedUnits(fallbackUnits);
-    }
-  };
 
-  const handleUnitTransition = (classItem: Class) => {
-    setSelectedClassForTransition(classItem);
-    const suggestedUnit = getNextSuggestedUnit(classItem.data?.unit || '');
-    setNewUnit(suggestedUnit);
-    setTransitionDate(new Date().toISOString().split('T')[0]);
-    setShowUnitTransitionModal(true);
-  };
-
-  const handleClassEnrollment = (classItem: Class) => {
-    setSelectedClassForEnrollment(classItem);
-    setShowEnrollmentModal(true);
-  };
-
-  const submitUnitTransition = async () => {
-    if (!selectedClassForTransition || !newUnit || !transitionDate) {
-      alert('Vui lòng điền đầy đủ thông tin');
-      return;
-    }
-
-    setIsSubmittingTransition(true);
-    try {
-      const currentTransitions = selectedClassForTransition.data?.unit_transitions || [];
-      const newTransition = {
-        from_unit: selectedClassForTransition.data?.unit || '',
-        to_unit: newUnit,
-        transition_date: transitionDate,
-        created_at: new Date().toISOString()
-      };
-
-      const updatedData = {
-        ...selectedClassForTransition.data,
-        unit: newUnit,
-        unit_transitions: [...currentTransitions, newTransition]
-      };
-
-      // Update both the JSONB data and the current_unit column
-      const response = await fetch(`/api/classes/${selectedClassForTransition.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          data: updatedData,
-          current_unit: newUnit // Add this to update the dedicated column
-        }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        alert('Chuyển unit thành công!');
-        setShowUnitTransitionModal(false);
-        setSelectedClassForTransition(null);
-        setNewUnit('');
-        setTransitionDate('');
-        fetchClasses();
-      } else {
-        throw new Error(result.message || 'Failed to update unit');
-      }
-    } catch (error) {
-      console.error('Error updating unit:', error);
-      alert(`Lỗi khi chuyển unit: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsSubmittingTransition(false);
-    }
-  };
 
   const testEndpoint = async (endpoint: string, method: string = 'GET', body?: any) => {
     setLoading(true);
@@ -579,19 +334,6 @@ export default function Dashboard() {
           endpoint = isEdit ? `/api/facilities/${data.id}` : '/api/facilities';
           method = isEdit ? 'PUT' : 'POST';
           break;
-        case 'Class':
-          endpoint = isEdit ? `/api/classes/${data.id}` : '/api/classes';
-          method = isEdit ? 'PUT' : 'POST';
-          break;
-        case 'Employee':
-          endpoint = isEdit ? `/api/employees/${data.id}` : '/api/employees';
-          method = isEdit ? 'PUT' : 'POST';
-          break;
-
-        case 'Enrollment':
-          endpoint = isEdit ? `/api/enrollments/${data.id}` : '/api/enrollments';
-          method = isEdit ? 'PUT' : 'POST';
-          break;
         case 'Attendance':
           endpoint = isEdit ? `/api/attendance/${data.id}` : '/api/attendance';
           method = isEdit ? 'PUT' : 'POST';
@@ -628,18 +370,9 @@ export default function Dashboard() {
         console.log(`${formType} ${action}d successfully:`, result);
         
         // Refresh lists when items are added/updated
-        if (formType === 'Class') {
-          setShowClassForm(false);
-          fetchClasses();
-        } else if (formType === 'Facility') {
+        if (formType === 'Facility') {
           setShowFacilityForm(false);
           fetchFacilitiesList();
-        } else if (formType === 'Employee') {
-          setShowEmployeeForm(false);
-          fetchEmployees();
-        } else if (formType === 'Enrollment') {
-          setShowEnrollmentModal(false);
-          // fetchEnrollments(); // Remove this as enrollments are handled differently
         } else if (formType === 'Attendance') {
           setShowAttendanceForm(false);
           fetchAttendances();
@@ -685,10 +418,7 @@ export default function Dashboard() {
     setShowFacilityDetail(true);
   };
 
-  const handleEmployeeView = (employee: Employee) => {
-    setSelectedEmployeeForDetail(employee);
-    setShowEmployeeDetail(true);
-  };
+
 
   // Facility CRUD handlers
   const handleFacilityDelete = async (facility: Facility) => {
@@ -731,40 +461,24 @@ export default function Dashboard() {
         );
       case 'classes':
         return (
-          <ClassesTab
-            showClassForm={showClassForm}
-            setShowClassForm={setShowClassForm}
-            selectedClassForLesson={selectedClassForLesson}
-            setSelectedClassForLesson={setSelectedClassForLesson}
-            classes={classes}
-            facilities={facilities}
-            programTypes={programTypes}
-            grapeSeedUnits={grapeSeedUnits}
-            isLoadingClasses={isLoadingClasses}
-            isLoadingFacilities={isLoadingFacilities}
-            isLoadingPrograms={isLoadingPrograms}
-            selectedFacility={selectedFacility}
-            setSelectedFacility={setSelectedFacility}
-            selectedProgram={selectedProgram}
-            setSelectedProgram={setSelectedProgram}
-            selectedStatus={selectedStatus}
-            setSelectedStatus={setSelectedStatus}
-            handleFormSubmit={handleFormSubmit}
-            handleUnitTransition={handleUnitTransition}
-            handleClassEnrollment={handleClassEnrollment}
-          />
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Lớp học</h3>
+            <p className="text-gray-500 mb-4">Chức năng quản lý lớp học đã được chuyển sang trang riêng.</p>
+            <a
+              href="/classes"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
+            >
+              Đến trang Lớp học
+            </a>
+          </div>
         );
       case 'employees':
-        return (
-          <EmployeesTab
-            showEmployeeForm={showEmployeeForm}
-            setShowEmployeeForm={setShowEmployeeForm}
-            employees={employees}
-            isLoadingEmployees={isLoadingEmployees}
-            handleFormSubmit={handleFormSubmit}
-            onViewEmployee={handleEmployeeView}
-          />
-        );
+        return <div>Employee management has been moved to <a href="/employee" className="text-blue-500 underline">/employee</a> page</div>;
 
       case 'sessions':
         return <SessionsTab />;
@@ -793,11 +507,11 @@ export default function Dashboard() {
           />
         );
       case 'business-tasks':
-        return <BusinessTasksTab employees={employees} />;
+        return <BusinessTasksTab employees={[]} />;
       case 'schedule':
         return <ScheduleTab />;
       case 'requests':
-        return <RequestsTab employees={employees} />;
+        return <RequestsTab employees={[]} />;
       case 'admissions':
         return (
           <AdmissionsTab
@@ -872,28 +586,10 @@ export default function Dashboard() {
       </div>
 
       {/* Unit Transition Modal */}
-      <UnitTransitionModal
-        showModal={showUnitTransitionModal}
-        setShowModal={setShowUnitTransitionModal}
-        selectedClass={selectedClassForTransition}
-        newUnit={newUnit}
-        setNewUnit={setNewUnit}
-        transitionDate={transitionDate}
-        setTransitionDate={setTransitionDate}
-        isSubmitting={isSubmittingTransition}
-        grapeSeedUnits={grapeSeedUnits}
-        onSubmit={submitUnitTransition}
-      />
+      {/* Removed UnitTransitionModal from dashboard as classes moved to separate page */}
 
       {/* Class Enrollment Modal */}
-      <ClassEnrollmentModal
-        showModal={showEnrollmentModal}
-        setShowModal={setShowEnrollmentModal}
-        selectedClass={selectedClassForEnrollment}
-        onEnrollmentSuccess={() => {
-          fetchClasses();
-        }}
-      />
+      {/* Removed ClassEnrollmentModal from dashboard as classes moved to separate page */}
 
       {/* Admission Form Modal */}
       {showAdmissionForm && (
@@ -913,14 +609,7 @@ export default function Dashboard() {
         facility={selectedFacilityForDetail}
       />
 
-      <EmployeeDetailModal
-        isOpen={showEmployeeDetail}
-        onClose={() => {
-          setShowEmployeeDetail(false);
-          setSelectedEmployeeForDetail(null);
-        }}
-        employee={selectedEmployeeForDetail}
-      />
+      {/* Removed EmployeeDetailModal as employee management moved to /employee page */}
 
 
     </ProtectedRoute>

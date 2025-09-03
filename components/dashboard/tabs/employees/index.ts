@@ -1,3 +1,11 @@
 export { default as EmployeesTab } from './EmployeesTab';
 export { default as EmployeeForm } from './EmployeeForm';
+export { default as EmployeeDetailModal } from './EmployeeDetailModal';
 export { default as WorkScheduleModal } from './WorkScheduleModal';
+export { default as EmployeesCrudContainer } from './EmployeesCrudContainer';
+export { default as EmployeesTable } from './EmployeesTable';
+export { default as EmployeesFormModal } from './EmployeesFormModal';
+export { useEmployeesData } from './hooks/useEmployeesData';
+export { useEmployeesForm } from './hooks/useEmployeesForm';
+export { useEmployeesFilters } from './hooks/useEmployeesFilters';
+export * from './types/employees.types';
