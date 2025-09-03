@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { ROLES } from '@/auth/rbac';
@@ -24,7 +25,8 @@ import RequestsTab from '@/dashboard/tabs/requests/RequestsTab';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('facilities');
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TabType | null>(null);
   const [activeMainTab, setActiveMainTab] = useState<MainTabType>('hcns');
   const [apiResults, setApiResults] = useState<ApiTestResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,21 +35,30 @@ export default function Dashboard() {
   // Load saved tab state from localStorage on component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedActiveTab = localStorage.getItem('dashboard-active-tab') as TabType;
+      // Check URL parameters and redirect if personal tab is requested
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      
+      if (tabParam === 'personal') {
+        // Redirect to personal page instead of showing in dashboard
+        router.push('/personal');
+        return;
+      }
+      
+      // Don't load saved activeTab - always start with welcome screen
+      // const savedActiveTab = localStorage.getItem('dashboard-active-tab') as TabType;
       const savedActiveMainTab = localStorage.getItem('dashboard-active-main-tab') as MainTabType;
       
-      if (savedActiveTab) {
-        setActiveTab(savedActiveTab);
-      }
+      // Only load saved main tab, not the active tab content
       if (savedActiveMainTab) {
         setActiveMainTab(savedActiveMainTab);
       }
     }
-  }, []);
+  }, [router]);
 
   // Save tab state to localStorage whenever it changes
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && activeTab) {
       localStorage.setItem('dashboard-active-tab', activeTab);
     }
   }, [activeTab]);
@@ -213,11 +224,8 @@ export default function Dashboard() {
   // Navigation helper functions
   const handleMainTabClick = (mainTabId: MainTabType) => {
     setActiveMainTab(mainTabId);
-    // Set the first subtab as active when switching main tabs
-    const mainTab = mainTabs.find(tab => tab.id === mainTabId);
-    if (mainTab && mainTab.subtabs.length > 0) {
-      setActiveTab(mainTab.subtabs[0].id);
-    }
+    // Don't change the active tab content - just expand/collapse the sidebar
+    // The content view should remain the same when clicking main tabs
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
@@ -227,6 +235,12 @@ export default function Dashboard() {
     if (dashboardTabs.includes(subTabId)) {
       setActiveTab(subTabId);
     } else {
+      // Special handling for personal tab - the Sidebar component handles navigation
+      if (subTabId === 'personal') {
+        // Don't set activeTab, let the Sidebar handle navigation to /personal
+        return;
+      }
+      
       // Use centralized navigation handler for other tabs
       handleSubTabNavigation(subTabId, window.location.pathname);
     }
@@ -322,25 +336,23 @@ export default function Dashboard() {
 
 
   const renderTabContent = () => {
-    switch (activeTab) {
-      case 'personal':
-        return (
-          <div className="text-center py-12">
-            <div className="text-gray-500 mb-4">
-              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Quản lý Cá nhân</h3>
-            <p className="text-gray-500 mb-4">Chức năng quản lý cá nhân đã được chuyển sang trang riêng.</p>
-            <a
-              href="/personal"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-orange-500 to-teal-500 hover:from-orange-600 hover:to-teal-500 transition-colors"
-            >
-              Đến trang Cá nhân
-            </a>
+    // Show welcome screen when no specific tab is selected
+    if (!activeTab) {
+      return (
+        <div className="text-center py-12">
+          <div className="text-gray-500 mb-4">
+            <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2m-6 4h6" />
+            </svg>
           </div>
-        );
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Chào mừng đến với MerakiERP</h3>
+          <p className="text-gray-500 mb-4">Chọn một chức năng từ menu bên trái để bắt đầu.</p>
+        </div>
+      );
+    }
+
+    switch (activeTab) {
       case 'facilities':
         return (
           <div className="text-center py-12">
@@ -544,7 +556,7 @@ export default function Dashboard() {
         <Sidebar
           mainTabs={mainTabs}
           activeMainTab={activeMainTab}
-          activeTab={activeTab}
+          activeTab={activeTab || 'facilities'}
           onMainTabClick={handleMainTabClick}
           onSubTabClick={handleSubTabClick}
           isMobileMenuOpen={mobileMenuOpen}

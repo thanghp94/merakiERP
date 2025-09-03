@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { TabType, MainTabType, MainTab } from '@/shared/types';
@@ -16,10 +17,12 @@ import {
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_COLORS
 } from '@/dashboard/shared/types';
-import { getMainTabs, handleSubTabNavigation } from '@/components/navigation/NavigationConfig';
+import { getMainTabs, handleSubTabNavigation, handleMainTabClick } from '@/components/navigation/NavigationConfig';
 
 export default function RequestsPage() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
+  const { tab } = router.query;
   const { employee: currentEmployee, loading: employeeLoading, error: employeeError } = useCurrentEmployee();
   const [activeTab, setActiveTab] = useState<TabType>('requests');
   const [activeMainTab, setActiveMainTab] = useState<MainTabType>('hcns');
@@ -44,6 +47,21 @@ export default function RequestsPage() {
 
   // Define the hierarchical navigation structure (same as dashboard)
   const mainTabs: MainTab[] = getMainTabs();
+
+  // Handle query parameter for pre-selected tab
+  useEffect(() => {
+    if (tab && typeof tab === 'string') {
+      setActiveTab(tab as TabType);
+      // Also set the appropriate main tab based on the subtab
+      const mainTabsData = getMainTabs();
+      for (const mainTab of mainTabsData) {
+        if (mainTab.subtabs.some(sub => sub.id === tab)) {
+          setActiveMainTab(mainTab.id);
+          break;
+        }
+      }
+    }
+  }, [tab]);
 
   // Load saved tab state from localStorage on component mount
   useEffect(() => {
@@ -74,13 +92,8 @@ export default function RequestsPage() {
   }, [activeMainTab]);
 
   // Navigation helper functions
-  const handleMainTabClick = (mainTabId: MainTabType) => {
-    setActiveMainTab(mainTabId);
-    // Set the first subtab as active when switching main tabs
-    const mainTab = mainTabs.find(tab => tab.id === mainTabId);
-    if (mainTab && mainTab.subtabs.length > 0) {
-      setActiveTab(mainTab.subtabs[0].id);
-    }
+  const handleMainTabClickLocal = (mainTabId: MainTabType) => {
+    handleMainTabClick(mainTabId, setActiveMainTab);
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
@@ -529,7 +542,7 @@ export default function RequestsPage() {
           mainTabs={mainTabs}
           activeMainTab={activeMainTab}
           activeTab={activeTab}
-          onMainTabClick={handleMainTabClick}
+          onMainTabClick={handleMainTabClickLocal}
           onSubTabClick={handleSubTabClick}
           isMobileMenuOpen={mobileMenuOpen}
           onMobileMenuClose={handleMobileMenuClose}

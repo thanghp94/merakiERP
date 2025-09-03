@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { TabType, MainTabType, MainTab, SubTab, Student } from '@/shared/types';
@@ -8,9 +9,13 @@ import Sidebar from '@/dashboard/shared/Sidebar';
 import StudentDetailModal from '@/dashboard/tabs/students/StudentDetailModal';
 import StudentsTab from '@/dashboard/tabs/students/StudentsTab';
 import TuitionTab from '@/dashboard/tabs/students/TuitionTab';
+import { getMainTabs, handleSubTabNavigation, handleMainTabClick } from '@/components/navigation/NavigationConfig';
 
 export default function StudentPage() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
+  const { tab } = router.query;
+
   const [activeTab, setActiveTab] = useState<TabType>('students');
   const [activeMainTab, setActiveMainTab] = useState<MainTabType>('khachhang');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -43,18 +48,23 @@ export default function StudentPage() {
     }
   }, [activeMainTab]);
 
-  // Define the hierarchical navigation structure for students
-  const mainTabs: MainTab[] = [
-    {
-      id: 'khachhang',
-      label: 'Khách hàng',
-      icon: '👥',
-      subtabs: [
-        { id: 'students', label: 'Học sinh', icon: '🎓' },
-        { id: 'tuition', label: 'Học phí', icon: '💰' }
-      ]
+  // Define the hierarchical navigation structure (same as dashboard)
+  const mainTabs: MainTab[] = getMainTabs();
+
+  // Handle query parameter for pre-selected tab
+  useEffect(() => {
+    if (tab && typeof tab === 'string') {
+      setActiveTab(tab as TabType);
+      // Also set the appropriate main tab based on the subtab
+      const mainTabsData = getMainTabs();
+      for (const mainTab of mainTabsData) {
+        if (mainTab.subtabs.some(sub => sub.id === tab)) {
+          setActiveMainTab(mainTab.id);
+          break;
+        }
+      }
     }
-  ];
+  }, [tab]);
 
   // Students management state
   const [showStudentForm, setShowStudentForm] = useState(false);
@@ -95,17 +105,20 @@ export default function StudentPage() {
 
 
   // Navigation helper functions
-  const handleMainTabClick = (mainTabId: MainTabType) => {
-    setActiveMainTab(mainTabId);
-    // Set the first subtab as active when switching main tabs
-    const mainTab = mainTabs.find(tab => tab.id === mainTabId);
-    if (mainTab && mainTab.subtabs.length > 0) {
-      setActiveTab(mainTab.subtabs[0].id);
-    }
+  const handleMainTabClickLocal = (mainTabId: MainTabType) => {
+    handleMainTabClick(mainTabId, setActiveMainTab);
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
-    setActiveTab(subTabId);
+    // For tabs that exist in student page (students, tuition)
+    const studentTabs = ['students', 'tuition'];
+
+    if (studentTabs.includes(subTabId)) {
+      setActiveTab(subTabId);
+    } else {
+      // Use centralized navigation handler for other tabs
+      handleSubTabNavigation(subTabId, window.location.pathname);
+    }
   };
 
   const handleMobileMenuClose = () => {
@@ -200,7 +213,7 @@ export default function StudentPage() {
           mainTabs={mainTabs}
           activeMainTab={activeMainTab}
           activeTab={activeTab}
-          onMainTabClick={handleMainTabClick}
+          onMainTabClick={handleMainTabClickLocal}
           onSubTabClick={handleSubTabClick}
           isMobileMenuOpen={mobileMenuOpen}
           onMobileMenuClose={handleMobileMenuClose}

@@ -113,13 +113,8 @@ export default function BusinessTasksPage() {
   }, [activeMainTab]);
 
   // Navigation helper functions
-  const handleMainTabClick = (mainTabId: MainTabType) => {
-    setActiveMainTab(mainTabId);
-    // Set the first subtab as active when switching main tabs
-    const mainTab = mainTabs.find(tab => tab.id === mainTabId);
-    if (mainTab && mainTab.subtabs.length > 0) {
-      setActiveTab(mainTab.subtabs[0].id);
-    }
+  const handleMainTabClickLocal = (mainTabId: MainTabType) => {
+    handleMainTabClick(mainTabId, setActiveMainTab);
   };
 
   const handleSubTabClick = (subTabId: TabType) => {

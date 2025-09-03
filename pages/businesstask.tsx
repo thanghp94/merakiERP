@@ -9,7 +9,7 @@ import BusinessTaskForm from '@/components/BusinessTaskForm';
 import TaskInstanceForm from '@/components/TaskInstanceForm';
 import { BusinessTask, TaskInstance, TaskStats, TASK_CATEGORY_LABELS, TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS, TASK_CATEGORY_COLORS } from '@/dashboard/shared/types';
 import { DataTable, TableColumn } from '@/dashboard/shared';
-import { getMainTabs, handleSubTabNavigation } from '@/components/navigation/NavigationConfig';
+import { getMainTabs, handleSubTabNavigation, handleMainTabClick } from '@/components/navigation/NavigationConfig';
 
 export default function BusinessTaskPage() {
   const { user, signOut } = useAuth();
@@ -73,13 +73,8 @@ export default function BusinessTaskPage() {
   }, [activeMainTab]);
 
   // Navigation helper functions
-  const handleMainTabClick = (mainTabId: MainTabType) => {
-    setActiveMainTab(mainTabId);
-    // Set the first subtab as active when switching main tabs
-    const mainTab = mainTabs.find(tab => tab.id === mainTabId);
-    if (mainTab && mainTab.subtabs.length > 0) {
-      setActiveTab(mainTab.subtabs[0].id);
-    }
+  const handleMainTabClickLocal = (mainTabId: MainTabType) => {
+    handleMainTabClick(mainTabId, setActiveMainTab);
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
@@ -624,7 +619,7 @@ export default function BusinessTaskPage() {
           mainTabs={mainTabs}
           activeMainTab={activeMainTab}
           activeTab={activeTab}
-          onMainTabClick={handleMainTabClick}
+          onMainTabClick={handleMainTabClickLocal}
           onSubTabClick={handleSubTabClick}
           isMobileMenuOpen={mobileMenuOpen}
           onMobileMenuClose={handleMobileMenuClose}

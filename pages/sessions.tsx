@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { TabType, MainTabType, MainTab } from '@/shared/types';
@@ -9,6 +10,7 @@ import AttendanceModal from '@/dashboard/tabs/attendance/AttendanceModal';
 import TeacherFeedbackModal from '@/dashboard/modals/TeacherFeedbackModal';
 import ClassCheckInModal from '@/dashboard/tabs/classes/ClassCheckInModal';
 import MediaUploadModal from '@/dashboard/modals/MediaUploadModal';
+import { getMainTabs, handleSubTabNavigation, handleMainTabClick } from '@/components/navigation/NavigationConfig';
 
 interface Session {
   id: string;
@@ -64,6 +66,9 @@ interface MainSessionGroup {
 
 export default function SessionsPage() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
+  const { tab } = router.query;
+
   const [activeTab, setActiveTab] = useState<TabType>('sessions');
   const [activeMainTab, setActiveMainTab] = useState<MainTabType>('vanhanh');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -139,48 +144,22 @@ export default function SessionsPage() {
   });
 
   // Define the hierarchical navigation structure (same as dashboard)
-  const mainTabs: MainTab[] = [
-    {
-      id: 'vanhanh',
-      label: 'Vận hành',
-      icon: '⚙️',
-      subtabs: [
-        { id: 'classes', label: 'Lớp học', icon: '🏫' },
-        { id: 'sessions', label: 'Buổi học', icon: '📚' },
-        { id: 'schedule', label: 'Lịch học', icon: '📅' }
-      ]
-    },
-    {
-      id: 'khachhang',
-      label: 'Khách hàng',
-      icon: '👥',
-      subtabs: [
-        { id: 'admissions', label: 'Tuyển sinh', icon: '📋' },
-        { id: 'students', label: 'Học sinh', icon: '🎓' }
-      ]
-    },
-    {
-      id: 'taichinh',
-      label: 'Tài chính',
-      icon: '💰',
-      subtabs: [
-        { id: 'finances', label: 'Tài chính', icon: '💳' },
-        { id: 'payroll', label: 'Lương', icon: '💰' }
-      ]
-    },
-    {
-      id: 'hcns',
-      label: 'HCNS',
-      icon: '👤',
-      subtabs: [
-        { id: 'employees', label: 'Nhân viên', icon: '👨‍💼' },
-        { id: 'requests', label: 'Yêu cầu', icon: '📋' },
-        { id: 'tasks', label: 'Bài tập', icon: '📝' },
-        { id: 'business-tasks', label: 'Công việc', icon: '💼' },
-        { id: 'facilities', label: 'Cơ sở', icon: '🏢' }
-      ]
+  const mainTabs: MainTab[] = getMainTabs();
+
+  // Handle query parameter for pre-selected tab
+  useEffect(() => {
+    if (tab && typeof tab === 'string') {
+      setActiveTab(tab as TabType);
+      // Also set the appropriate main tab based on the subtab
+      const mainTabsData = getMainTabs();
+      for (const mainTab of mainTabsData) {
+        if (mainTab.subtabs.some(sub => sub.id === tab)) {
+          setActiveMainTab(mainTab.id);
+          break;
+        }
+      }
     }
-  ];
+  }, [tab]);
 
   // Load saved tab state from localStorage on component mount
   useEffect(() => {
@@ -713,17 +692,20 @@ export default function SessionsPage() {
   );
 
   // Navigation helper functions
-  const handleMainTabClick = (mainTabId: MainTabType) => {
-    setActiveMainTab(mainTabId);
-    // Set the first subtab as active when switching main tabs
-    const mainTab = mainTabs.find(tab => tab.id === mainTabId);
-    if (mainTab && mainTab.subtabs.length > 0) {
-      setActiveTab(mainTab.subtabs[0].id);
-    }
+  const handleMainTabClickLocal = (mainTabId: MainTabType) => {
+    handleMainTabClick(mainTabId, setActiveMainTab);
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
-    setActiveTab(subTabId);
+    // For tabs that exist in sessions page (sessions)
+    const sessionsTabs = ['sessions'];
+
+    if (sessionsTabs.includes(subTabId)) {
+      setActiveTab(subTabId);
+    } else {
+      // Use centralized navigation handler for other tabs
+      handleSubTabNavigation(subTabId, window.location.pathname);
+    }
   };
 
   const handleMobileMenuClose = () => {
@@ -851,7 +833,7 @@ export default function SessionsPage() {
           mainTabs={mainTabs}
           activeMainTab={activeMainTab}
           activeTab={activeTab}
-          onMainTabClick={handleMainTabClick}
+          onMainTabClick={handleMainTabClickLocal}
           onSubTabClick={handleSubTabClick}
           isMobileMenuOpen={mobileMenuOpen}
           onMobileMenuClose={handleMobileMenuClose}

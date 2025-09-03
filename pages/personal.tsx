@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { TabType, MainTabType, MainTab } from '@/shared/types';
@@ -10,10 +11,13 @@ import TaskForm from '@/components/TaskForm';
 import { Task } from '@/dashboard/shared/types';
 import { formatDate, getStatusBadge } from '@/dashboard/shared/utils';
 import { DataTable, TableColumn } from '@/dashboard/shared';
-import { getMainTabs, handleSubTabNavigation } from '@/components/navigation/NavigationConfig';
+import { getMainTabs, handleSubTabNavigation, handleMainTabClick } from '@/components/navigation/NavigationConfig';
 
 export default function PersonalPage() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
+  const { tab } = router.query;
+
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [activeMainTab, setActiveMainTab] = useState<MainTabType>('hcns');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -26,15 +30,43 @@ export default function PersonalPage() {
   // Define the hierarchical navigation structure (same as dashboard)
   const mainTabs: MainTab[] = getMainTabs();
 
+  // Handle query parameter for pre-selected tab
+  useEffect(() => {
+    if (tab && typeof tab === 'string') {
+      // Only set tab if it's supported by personal page
+      const supportedTabs = ['personal', 'tasks'];
+      if (supportedTabs.includes(tab)) {
+        setActiveTab(tab as TabType);
+        // Also set the appropriate main tab based on the subtab
+        const mainTabsData = getMainTabs();
+        for (const mainTab of mainTabsData) {
+          if (mainTab.subtabs.some(sub => sub.id === tab)) {
+            setActiveMainTab(mainTab.id);
+            break;
+          }
+        }
+      } else {
+        // If unsupported tab requested, default to personal
+        setActiveTab('personal');
+      }
+    }
+  }, [tab]);
+
   // Load saved tab state from localStorage on component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedActiveTab = localStorage.getItem('personal-active-tab') as TabType;
       const savedActiveMainTab = localStorage.getItem('personal-active-main-tab') as MainTabType;
 
-      if (savedActiveTab) {
+      // Only restore supported tabs
+      const supportedTabs = ['personal', 'tasks'];
+      if (savedActiveTab && supportedTabs.includes(savedActiveTab)) {
         setActiveTab(savedActiveTab);
+      } else {
+        // Default to personal if no valid saved tab
+        setActiveTab('personal');
       }
+      
       if (savedActiveMainTab) {
         setActiveMainTab(savedActiveMainTab);
       }
@@ -44,7 +76,11 @@ export default function PersonalPage() {
   // Save tab state to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('personal-active-tab', activeTab);
+      // Only save supported tabs
+      const supportedTabs = ['personal', 'tasks'];
+      if (supportedTabs.includes(activeTab)) {
+        localStorage.setItem('personal-active-tab', activeTab);
+      }
     }
   }, [activeTab]);
 
@@ -55,13 +91,8 @@ export default function PersonalPage() {
   }, [activeMainTab]);
 
   // Navigation helper functions
-  const handleMainTabClick = (mainTabId: MainTabType) => {
-    setActiveMainTab(mainTabId);
-    // Set the first subtab as active when switching main tabs
-    const mainTab = mainTabs.find(tab => tab.id === mainTabId);
-    if (mainTab && mainTab.subtabs.length > 0) {
-      setActiveTab(mainTab.subtabs[0].id);
-    }
+  const handleMainTabClickLocal = (mainTabId: MainTabType) => {
+    handleMainTabClick(mainTabId, setActiveMainTab);
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
@@ -221,7 +252,11 @@ export default function PersonalPage() {
   };
 
   const renderTabContent = () => {
-    switch (activeTab) {
+    // Always default to personal tab if activeTab is not supported
+    const supportedTabs = ['personal', 'tasks'];
+    const currentTab = supportedTabs.includes(activeTab) ? activeTab : 'personal';
+    
+    switch (currentTab) {
       case 'personal':
         return <PersonalTabWithSidebar />;
       case 'tasks':
@@ -271,7 +306,8 @@ export default function PersonalPage() {
         );
 
       default:
-        return <div>Tab not found</div>;
+        // This should never happen now, but keep as fallback
+        return <PersonalTabWithSidebar />;
     }
   };
 
@@ -288,7 +324,7 @@ export default function PersonalPage() {
           mainTabs={mainTabs}
           activeMainTab={activeMainTab}
           activeTab={activeTab}
-          onMainTabClick={handleMainTabClick}
+          onMainTabClick={handleMainTabClickLocal}
           onSubTabClick={handleSubTabClick}
           isMobileMenuOpen={mobileMenuOpen}
           onMobileMenuClose={handleMobileMenuClose}
@@ -325,11 +361,11 @@ export default function PersonalPage() {
       </div>
 
       {/* Task Form Modal */}
-      <TaskForm
-        isOpen={showTaskForm}
-        onClose={() => setShowTaskForm(false)}
-        onSubmit={(data) => handleFormSubmit(data, 'Task')}
-      />
+      {showTaskForm && (
+        <TaskForm
+          onSubmit={(data) => handleFormSubmit(data, 'Task')}
+        />
+      )}
 
 
     </ProtectedRoute>

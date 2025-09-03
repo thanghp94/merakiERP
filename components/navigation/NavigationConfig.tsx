@@ -1,4 +1,4 @@
-import { MainTab, TabType } from '@/shared/types';
+import { MainTab, TabType, MainTabType } from '@/shared/types';
 
 export const getMainTabs = (): MainTab[] => [
   {
@@ -43,7 +43,7 @@ export const getMainTabs = (): MainTab[] => [
   }
 ];
 
-// Navigation handler function
+// Navigation handler function for subtabs
 export const handleSubTabNavigation = (subTabId: TabType, currentPath: string) => {
   const mainTabs = getMainTabs();
 
@@ -62,4 +62,14 @@ export const handleSubTabNavigation = (subTabId: TabType, currentPath: string) =
 
   // Fallback: redirect to dashboard if no specific link found
   window.location.href = `/dashboard?tab=${subTabId}`;
+};
+
+// Centralized main tab click handler - only updates activeMainTab, doesn't change content
+export const handleMainTabClick = (
+  mainTabId: MainTabType, 
+  setActiveMainTab: (id: MainTabType) => void
+) => {
+  setActiveMainTab(mainTabId);
+  // Don't change the active tab content - just expand/collapse the sidebar
+  // The content view should remain the same when clicking main tabs
 };

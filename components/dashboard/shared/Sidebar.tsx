@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { ROLES } from '@/auth/rbac';
 import { MainTab, MainTabType, TabType } from '@/shared/types';
 import { Button } from '@/components/ui';
+import { handleSubTabNavigation } from '@/components/navigation/NavigationConfig';
 
 interface SidebarProps {
   mainTabs: MainTab[];
@@ -60,8 +61,9 @@ export default function Sidebar({
       setExpandedMainTab(null);
     } else {
       setExpandedMainTab(mainTabId);
-      onMainTabClick(mainTabId);
     }
+    // Always call the parent handler to update activeMainTab state
+    onMainTabClick(mainTabId);
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
@@ -70,6 +72,18 @@ export default function Sidebar({
       handleNavigateToStudentPage();
       return;
     }
+
+    // Special handling for personal tab - navigate to personal page
+    if (subTabId === 'personal') {
+      router.push('/personal');
+      if (isMobileMenuOpen) {
+        onMobileMenuClose();
+      }
+      return;
+    }
+
+    // Use centralized navigation handler for other tabs
+    handleSubTabNavigation(subTabId, window.location.pathname);
 
     onSubTabClick(subTabId);
     // Close mobile menu when selecting a subtab
@@ -190,8 +204,6 @@ export default function Sidebar({
           </div>
         </nav>
 
-
-
         {/* User Profile Section */}
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center space-x-3 mb-3">
@@ -216,10 +228,7 @@ export default function Sidebar({
             className={`
               w-full flex items-center space-x-3 px-3 py-2.5 text-sm rounded-lg mb-3
               transition-all duration-200
-              ${activeTab === 'personal'
-                ? 'bg-gradient-to-r from-orange-500 to-teal-500 text-white shadow-md font-medium'
-                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200'
-              }
+              text-gray-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200
             `}
           >
             <span className="text-lg">👤</span>
@@ -234,7 +243,7 @@ export default function Sidebar({
             fullWidth
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
             </svg>
             Đăng xuất
           </Button>
