@@ -25,15 +25,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getStudents(req: NextApiRequest, res: NextApiResponse) {
-  const { 
-    status, 
-    level, 
-    search, 
-    facility_id, 
-    class_id, 
-    program_type, 
-    limit = 50, 
-    offset = 0 
+  const {
+    status,
+    level,
+    search,
+    facility_id,
+    class_id,
+    program_type,
+    payment_status,
+    due_month,
+    due_year,
+    limit = 50,
+    offset = 0
   } = req.query;
 
   // If filtering by facility, class, or program_type, we need to join with enrollments and classes
@@ -61,6 +64,16 @@ async function getStudents(req: NextApiRequest, res: NextApiResponse) {
               name
             )
           )
+        ),
+        invoices:invoices!left (
+          id,
+          amount,
+          outstanding_amount,
+          payment_status,
+          due_date,
+          created_at,
+          class_id,
+          student_id
         )
       `)
       .eq('enrollments.status', 'active')
@@ -74,12 +87,24 @@ async function getStudents(req: NextApiRequest, res: NextApiResponse) {
     // Apply class filter
     if (class_id && class_id !== 'all') {
       query = query.eq('enrollments.class_id', class_id);
+      query = query.eq('invoices.class_id', class_id);
     }
 
     // Apply program_type filter
     if (program_type && program_type !== 'all') {
       query = query.eq('enrollments.classes.data->>program_type', program_type);
     }
+
+    // Remove payment_status filter on invoices to include all invoices including drafts
+    // if (payment_status && payment_status !== 'all') {
+    //   query = query.eq('enrollments.invoices.payment_status', payment_status);
+    // }
+
+    // Remove due date filters on invoices to include all invoices
+    // if (due_month && due_year) {
+    //   query = query.gte('enrollments.invoices.due_date', `${due_year}-${due_month}-01`)
+    //                .lte('enrollments.invoices.due_date', `${due_year}-${due_month}-31`);
+    // }
   } else {
     // Simple query without joins
     query = supabase
@@ -135,7 +160,8 @@ async function getStudents(req: NextApiRequest, res: NextApiResponse) {
           ...student,
           current_enrollments: student.enrollments || []
         };
-        delete studentWithEnrollment.enrollments;
+        // Keep enrollments as well for backward compatibility or other uses
+        // Do not delete enrollments here
         uniqueStudents.set(student.id, studentWithEnrollment);
       }
     });
@@ -143,6 +169,9 @@ async function getStudents(req: NextApiRequest, res: NextApiResponse) {
     processedData = Array.from(uniqueStudents.values());
   }
 
+  if (processedData && processedData.length > 0) {
+    console.log('First student invoices:', processedData[0].current_enrollments?.[0]?.invoices);
+  }
   return res.status(200).json({
     success: true,
     data: processedData,

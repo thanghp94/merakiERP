@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import { ROLES } from '@/auth/rbac';
 import { MainTab, MainTabType, TabType } from '@/shared/types';
@@ -24,10 +25,18 @@ export default function Sidebar({
   onMobileMenuClose
 }: SidebarProps) {
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const [expandedMainTab, setExpandedMainTab] = useState<MainTabType | null>(activeMainTab);
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleNavigateToStudentPage = () => {
+    router.push('/student');
+    if (isMobileMenuOpen) {
+      onMobileMenuClose();
+    }
   };
 
   const getRoleDisplayName = (role: string) => {
@@ -56,6 +65,12 @@ export default function Sidebar({
   };
 
   const handleSubTabClick = (subTabId: TabType) => {
+    // Special handling for student management - navigate to dedicated page
+    if (subTabId === 'students') {
+      handleNavigateToStudentPage();
+      return;
+    }
+
     onSubTabClick(subTabId);
     // Close mobile menu when selecting a subtab
     if (isMobileMenuOpen) {
@@ -149,7 +164,7 @@ export default function Sidebar({
                         key={subTab.id}
                         onClick={() => handleSubTabClick(subTab.id)}
                         className={`
-                          w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md
+                          w-full flex items-center justify-between px-3 py-2 text-sm rounded-md
                           transition-all duration-200
                           ${activeTab === subTab.id
                             ? 'bg-orange-100 text-orange-700 border-l-2 border-orange-500 font-medium'
@@ -157,8 +172,15 @@ export default function Sidebar({
                           }
                         `}
                       >
-                        <span className="text-base">{subTab.icon}</span>
-                        <span>{subTab.label}</span>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-base">{subTab.icon}</span>
+                          <span>{subTab.label}</span>
+                        </div>
+                        {subTab.id === 'students' && (
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -167,6 +189,8 @@ export default function Sidebar({
             ))}
           </div>
         </nav>
+
+
 
         {/* User Profile Section */}
         <div className="border-t border-gray-200 p-4">
@@ -185,6 +209,22 @@ export default function Sidebar({
               </p>
             </div>
           </div>
+          
+          {/* Personal Tab Button */}
+          <button
+            onClick={() => handleSubTabClick('personal')}
+            className={`
+              w-full flex items-center space-x-3 px-3 py-2.5 text-sm rounded-lg mb-3
+              transition-all duration-200
+              ${activeTab === 'personal'
+                ? 'bg-gradient-to-r from-orange-500 to-teal-500 text-white shadow-md font-medium'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200'
+              }
+            `}
+          >
+            <span className="text-lg">👤</span>
+            <span>Cá nhân</span>
+          </button>
           
           <Button
             variant="danger"

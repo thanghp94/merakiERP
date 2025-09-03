@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
-  const { status, department, position, limit = 50, offset = 0 } = req.query;
+  const { status, department, position, email, limit = 50, offset = 0 } = req.query;
 
   let query = supabase
     .from('employees')
@@ -42,6 +42,11 @@ async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
 
   if (position) {
     query = query.eq('position', position);
+  }
+
+  // Add email filter support - search in JSONB data field
+  if (email) {
+    query = query.contains('data', { email: email });
   }
 
   if (limit) {

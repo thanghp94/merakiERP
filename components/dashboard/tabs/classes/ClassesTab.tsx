@@ -84,9 +84,10 @@ export default function ClassesTab({
   // Handler functions for CRUD operations
   const handleViewClass = (classItem: Class) => {
     console.log('handleViewClass called with:', classItem);
-    setViewingClass(classItem);
-    setShowViewModal(true);
-    console.log('Modal state set to true');
+    // Show the detailed form modal in view-only mode instead of simple view modal
+    setEditingClass(classItem);
+    setShowEditModal(true);
+    console.log('Edit modal state set to true for view-only');
   };
 
   const handleEditClass = (classItem: Class) => {

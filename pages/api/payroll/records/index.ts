@@ -145,6 +145,7 @@ async function createPayrollRecord(req: NextApiRequest, res: NextApiResponse) {
         employee_id,
         payroll_period_id,
         base_salary,
+        insurance_base,
         working_days,
         actual_working_days,
         allowances,
@@ -186,7 +187,7 @@ async function createPayrollRecord(req: NextApiRequest, res: NextApiResponse) {
     console.error('Calculation error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to calculate payroll'
+      message: error instanceof Error ? error.message : 'Failed to calculate payroll'
     });
   }
 }
@@ -199,6 +200,51 @@ async function updatePayrollRecord(req: NextApiRequest, res: NextApiResponse) {
       success: false,
       message: 'Payroll record ID is required'
     });
+  }
+
+  // If insurance_base is being updated, we need to recalculate the payroll
+  if (updateData.insurance_base !== undefined) {
+    // Get the current payroll record to recalculate
+    const { data: currentRecord, error: fetchError } = await supabase
+      .from('payroll_records')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Database error:', fetchError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch current payroll record'
+      });
+    }
+
+    // Recalculate social insurance with new insurance_base
+    const { data: insuranceData, error: insuranceError } = await supabase
+      .rpc('calculate_vietnamese_social_insurance', {
+        gross_salary: currentRecord.gross_salary,
+        insurance_base: updateData.insurance_base
+      });
+
+    if (insuranceError) {
+      throw new Error('Failed to recalculate social insurance');
+    }
+
+    const insurance = insuranceData[0];
+
+    // Update the insurance fields in updateData
+    updateData.bhxh_employee = insurance.bhxh_employee;
+    updateData.bhyt_employee = insurance.bhyt_employee;
+    updateData.bhtn_employee = insurance.bhtn_employee;
+    updateData.bhxh_employer = insurance.bhxh_employer;
+    updateData.bhyt_employer = insurance.bhyt_employer;
+    updateData.bhtn_employer = insurance.bhtn_employer;
+
+    // Recalculate total deductions and net salary
+    const total_deductions = insurance.bhxh_employee + insurance.bhyt_employee + insurance.bhtn_employee +
+                           currentRecord.personal_income_tax + currentRecord.total_other_deductions;
+    updateData.total_deductions = total_deductions;
+    updateData.net_salary = currentRecord.gross_salary - total_deductions;
   }
 
   const { data, error } = await supabase

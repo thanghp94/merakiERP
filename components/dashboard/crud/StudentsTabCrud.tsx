@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { z } from 'zod';
-import { Student } from '@/shared/types';
-import { formatDate, getStatusBadge } from '@/shared/utils';
+import { Student } from '../shared/types';
+import { formatDate, getStatusBadge } from '../shared/utils';
 import { 
   CrudTable, 
   TableColumn, 
@@ -10,10 +10,10 @@ import {
   FormModal, 
   FormGrid, 
   FormField 
-} from '@/dashboard/shared';
-import { useFormWithValidation, commonSchemas, createFormData } from '@/hooks/useFormWithValidation';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
-import InvoiceDetailDrawer from '@/dashboard/tabs/invoices/InvoiceDetailDrawer';
+} from '../shared';
+import { useFormWithValidation, commonSchemas, createFormData } from '../../../lib/hooks/useFormWithValidation';
+import { useEscapeKey } from '../../../lib/hooks/useEscapeKey';
+import InvoiceDetailDrawer from '../tabs/invoices/InvoiceDetailDrawer';
 
 interface StudentsTabCrudProps {
   students: Student[];
@@ -624,24 +624,7 @@ export default function StudentsTabCrud({
           </div>
         )
       },
-      {
-        key: 'status',
-        label: 'Trạng thái',
-        render: (value) => {
-          const statusColors = {
-            active: 'bg-green-100 text-green-800',
-            inactive: 'bg-yellow-100 text-yellow-800',
-            graduated: 'bg-blue-100 text-blue-800',
-            suspended: 'bg-red-100 text-red-800'
-          };
-          
-          return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[value as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}`}>
-              {STUDENT_STATUSES[value as keyof typeof STUDENT_STATUSES] || value}
-            </span>
-          );
-        }
-      }
+
     ];
   };
 

@@ -8,6 +8,10 @@ export interface TableColumn<T = any> {
   sortable?: boolean;
   width?: string;
   align?: 'left' | 'center' | 'right';
+  priority?: 'high' | 'medium' | 'low'; // Responsive priority
+  hideOnMobile?: boolean; // Hide on mobile screens
+  hideOnTablet?: boolean; // Hide on tablet screens
+  minWidth?: string; // Minimum width for the column
 }
 
 export interface TableAction<T = any> {
@@ -83,6 +87,59 @@ export default function DataTable<T = any>({
   }
 
 
+  // Helper function to get responsive classes for columns
+  const getColumnClasses = (column: TableColumn<T>) => {
+    let classes = `px-6 py-3 text-left text-xs font-semibold text-orange-800 uppercase tracking-wider`;
+    
+    // Add responsive visibility classes
+    if (column.hideOnMobile) {
+      classes += ' hidden sm:table-cell';
+    }
+    if (column.hideOnTablet) {
+      classes += ' hidden md:table-cell';
+    }
+    
+    // Add width classes
+    if (column.width) {
+      classes += ` w-${column.width}`;
+    }
+    if (column.minWidth) {
+      classes += ` min-w-[${column.minWidth}]`;
+    }
+    
+    // Add alignment classes
+    if (column.align === 'center') {
+      classes += ' text-center';
+    } else if (column.align === 'right') {
+      classes += ' text-right';
+    }
+    
+    return classes;
+  };
+
+  const getCellClasses = (column: TableColumn<T>) => {
+    let classes = `px-6 py-2 whitespace-nowrap`;
+    
+    // Add responsive visibility classes
+    if (column.hideOnMobile) {
+      classes += ' hidden sm:table-cell';
+    }
+    if (column.hideOnTablet) {
+      classes += ' hidden md:table-cell';
+    }
+    
+    // Add alignment classes
+    if (column.align === 'center') {
+      classes += ' text-center';
+    } else if (column.align === 'right') {
+      classes += ' text-right';
+    } else {
+      classes += ' text-left';
+    }
+    
+    return classes;
+  };
+
   return (
     <div className={`bg-white rounded-lg shadow-md overflow-hidden ${className}`}>
       <div className="overflow-x-auto">
@@ -92,18 +149,13 @@ export default function DataTable<T = any>({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-6 py-3 text-left text-xs font-semibold text-orange-800 uppercase tracking-wider ${
-                    column.width ? `w-${column.width}` : ''
-                  } ${
-                    column.align === 'center' ? 'text-center' : 
-                    column.align === 'right' ? 'text-right' : 'text-left'
-                  }`}
+                  className={getColumnClasses(column)}
                 >
                   {column.label}
                 </th>
               ))}
               {actions.length > 0 && (
-                <th className={`px-6 py-3 text-center text-xs font-semibold text-orange-800 uppercase tracking-wider ${actionColumnWidth || 'w-32'}`}>
+                <th className="px-6 py-3 text-center text-xs font-semibold text-orange-800 uppercase tracking-wider min-w-[140px] w-auto sticky right-0 bg-gradient-to-r from-orange-50 to-orange-100">
                   Thao tác
                 </th>
               )}
@@ -119,10 +171,7 @@ export default function DataTable<T = any>({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={`px-6 py-2 whitespace-nowrap ${
-                      column.align === 'center' ? 'text-center' : 
-                      column.align === 'right' ? 'text-right' : 'text-left'
-                    }`}
+                    className={getCellClasses(column)}
                   >
                     {column.render 
                       ? column.render((row as any)[column.key], row)
@@ -136,10 +185,10 @@ export default function DataTable<T = any>({
                 ))}
                 {actions.length > 0 && (
                   <td 
-                    className={`px-6 py-2 whitespace-nowrap text-sm font-medium ${actionColumnWidth || 'w-32'}`}
+                    className="px-3 py-1 text-sm font-medium min-w-[140px] w-auto sticky right-0 bg-white"
                     onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
                   >
-                    <div className="flex space-x-1 justify-center">
+                    <div className="flex gap-1 justify-center items-center flex-nowrap">
                       {actions
                         .filter(action => !action.show || action.show(row))
                         .map((action, actionIndex) => (

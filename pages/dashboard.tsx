@@ -7,14 +7,14 @@ import { TabType, MainTabType, MainTab, SubTab, ApiTestResult, Class, Facility, 
 import { tabs, getNextSuggestedUnit } from '@/shared/utils';
 import { Button, Card, Badge } from '@/components/ui';
 import Sidebar from '@/dashboard/shared/Sidebar';
-import PersonalTab from '@/dashboard/tabs/personal/PersonalTab';
+import PersonalTabWithSidebar from '@/dashboard/tabs/personal/PersonalTabWithSidebar';
 import { FacilitiesTabCrud } from '@/dashboard/crud';
 import FacilityDetailModal from '@/dashboard/tabs/facilities/FacilityDetailModal';
 import EmployeeDetailModal from '@/dashboard/tabs/employees/EmployeeDetailModal';
-import StudentDetailModal from '@/dashboard/tabs/students/StudentDetailModal';
+
 import ClassesTab from '@/dashboard/tabs/classes/ClassesTab';
 import EmployeesTab from '@/dashboard/tabs/employees/EmployeesTab';
-import StudentsTab from '@/dashboard/tabs/students/StudentsTab';
+
 import SessionsTab from '@/dashboard/tabs/sessions/SessionsTab';
 import AttendanceTab from '@/dashboard/tabs/attendance/AttendanceTab';
 import InvoicesTab from '@/dashboard/tabs/invoices/InvoicesTab';
@@ -146,10 +146,7 @@ export default function Dashboard() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
 
-  // Students management state
-  const [showStudentForm, setShowStudentForm] = useState(false);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
 
 
   // Attendance management state
@@ -176,8 +173,6 @@ export default function Dashboard() {
   const [selectedFacilityForDetail, setSelectedFacilityForDetail] = useState<Facility | null>(null);
   const [showEmployeeDetail, setShowEmployeeDetail] = useState(false);
   const [selectedEmployeeForDetail, setSelectedEmployeeForDetail] = useState<Employee | null>(null);
-  const [showStudentDetail, setShowStudentDetail] = useState(false);
-  const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<Student | null>(null);
 
   useEffect(() => {
     if (activeTab === 'classes') {
@@ -189,8 +184,6 @@ export default function Dashboard() {
       fetchFacilitiesList();
     } else if (activeTab === 'employees') {
       fetchEmployees();
-    } else if (activeTab === 'students') {
-      fetchStudents();
     } else if (activeTab === 'sessions') {
       // Sessions tab handles its own data fetching
     } else if (activeTab === 'attendance') {
@@ -339,25 +332,7 @@ export default function Dashboard() {
     }
   };
 
-  const fetchStudents = async () => {
-    setIsLoadingStudents(true);
-    try {
-      const response = await fetch('/api/students');
-      const result = await response.json();
-      
-      if (result.success) {
-        setStudents(result.data);
-      } else {
-        console.error('Failed to fetch students:', result.message);
-        setStudents([]);
-      }
-    } catch (error) {
-      console.error('Error fetching students:', error);
-      setStudents([]);
-    } finally {
-      setIsLoadingStudents(false);
-    }
-  };
+
 
 
   const fetchAttendances = async () => {
@@ -612,10 +587,7 @@ export default function Dashboard() {
           endpoint = isEdit ? `/api/employees/${data.id}` : '/api/employees';
           method = isEdit ? 'PUT' : 'POST';
           break;
-        case 'Student':
-          endpoint = isEdit ? `/api/students/${data.id}` : '/api/students';
-          method = isEdit ? 'PUT' : 'POST';
-          break;
+
         case 'Enrollment':
           endpoint = isEdit ? `/api/enrollments/${data.id}` : '/api/enrollments';
           method = isEdit ? 'PUT' : 'POST';
@@ -665,9 +637,6 @@ export default function Dashboard() {
         } else if (formType === 'Employee') {
           setShowEmployeeForm(false);
           fetchEmployees();
-        } else if (formType === 'Student') {
-          setShowStudentForm(false);
-          fetchStudents();
         } else if (formType === 'Enrollment') {
           setShowEnrollmentModal(false);
           // fetchEnrollments(); // Remove this as enrollments are handled differently
@@ -721,11 +690,6 @@ export default function Dashboard() {
     setShowEmployeeDetail(true);
   };
 
-  const handleStudentView = (student: Student) => {
-    setSelectedStudentForDetail(student);
-    setShowStudentDetail(true);
-  };
-
   // Facility CRUD handlers
   const handleFacilityDelete = async (facility: Facility) => {
     if (!confirm(`Bạn có chắc chắn muốn xóa cơ sở "${facility.name}"?`)) {
@@ -754,7 +718,7 @@ export default function Dashboard() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'personal':
-        return <PersonalTab />;
+        return <PersonalTabWithSidebar />;
       case 'facilities':
         return (
           <FacilitiesTabCrud
@@ -801,14 +765,7 @@ export default function Dashboard() {
             onViewEmployee={handleEmployeeView}
           />
         );
-      case 'students':
-        return (
-          <StudentsTab
-            showStudentForm={showStudentForm}
-            setShowStudentForm={setShowStudentForm}
-            onViewStudent={handleStudentView}
-          />
-        );
+
       case 'sessions':
         return <SessionsTab />;
       case 'attendance':
@@ -965,14 +922,7 @@ export default function Dashboard() {
         employee={selectedEmployeeForDetail}
       />
 
-      <StudentDetailModal
-        isOpen={showStudentDetail}
-        onClose={() => {
-          setShowStudentDetail(false);
-          setSelectedStudentForDetail(null);
-        }}
-        student={selectedStudentForDetail}
-      />
+
     </ProtectedRoute>
   );
 }

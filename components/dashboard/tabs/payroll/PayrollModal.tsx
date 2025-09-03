@@ -4,11 +4,12 @@ import { FormModal, FormGrid, FormField } from '../../shared';
 interface PayrollModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: () => void;
   recordForm: {
     employee_id: string;
     payroll_period_id: string;
     base_salary: string;
+    social_insurance_salary: string;
     working_days: string;
     actual_working_days: string;
     allowances: {
@@ -47,7 +48,7 @@ export default function PayrollModal({
   const handleModalSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await onSubmit({} as React.FormEvent);
+      await onSubmit();
     } catch (error) {
       console.error('Error submitting payroll:', error);
     } finally {
@@ -96,6 +97,24 @@ export default function PayrollModal({
               type="number"
               value={recordForm.base_salary}
               onChange={(e) => setRecordForm({...recordForm, base_salary: e.target.value})}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="15000000"
+              required
+            />
+          </FormField>
+
+          <FormField label="Lương BHXH (VND)" required>
+            <input
+              type="number"
+              value={recordForm.social_insurance_salary}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (parseFloat(value) > parseFloat(recordForm.base_salary)) {
+                  alert('Lương BHXH không được vượt quá lương cơ bản');
+                  return;
+                }
+                setRecordForm({...recordForm, social_insurance_salary: value});
+              }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="15000000"
               required

@@ -11,12 +11,14 @@ interface ClassFormProps {
   onSubmit: (classData: any) => void;
   initialData?: any;
   isEditing?: boolean;
+  viewOnly?: boolean;
 }
 
 const ClassForm: React.FC<ClassFormProps> = ({ 
   onSubmit, 
   initialData = {}, 
-  isEditing = false 
+  isEditing = false,
+  viewOnly = false
 }) => {
   const [formData, setFormData] = useState({
     class_name: initialData.class_name || '',
@@ -272,7 +274,7 @@ const ClassForm: React.FC<ClassFormProps> = ({
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Có lỗi xảy ra khi lưu dữ liệu: ' + error.message);
+      alert('Có lỗi xảy ra khi lưu dữ liệu: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsSubmitting(false);
     }
@@ -292,8 +294,9 @@ const ClassForm: React.FC<ClassFormProps> = ({
               name="class_name"
               value={formData.class_name}
               onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required={!viewOnly}
+              disabled={viewOnly}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${viewOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
               placeholder="Nhập tên lớp học"
             />
           </div>
@@ -307,8 +310,8 @@ const ClassForm: React.FC<ClassFormProps> = ({
               name="facility_id"
               value={formData.facility_id}
               onChange={handleChange}
-              disabled={isLoadingFacilities}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={isLoadingFacilities || viewOnly}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${viewOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
             >
               <option value="">Chọn cơ sở</option>
               {facilities.map((facility: any) => (
@@ -328,7 +331,8 @@ const ClassForm: React.FC<ClassFormProps> = ({
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${viewOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
             >
               <option value="active">Hoạt động</option>
               <option value="inactive">Không hoạt động</option>
@@ -347,8 +351,9 @@ const ClassForm: React.FC<ClassFormProps> = ({
               name="start_date"
               value={formData.start_date}
               onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required={!viewOnly}
+              disabled={viewOnly}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${viewOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
             />
           </div>
 

@@ -2,7 +2,6 @@
 // Standardized CRUD interfaces using CrudTable component
 
 export { default as FacilitiesTabCrud } from './FacilitiesTabCrud';
-export { default as EmployeesTabCrud } from './EmployeesTabCrud';
 export { default as RequestsTabCrud } from './RequestsTabCrud';
 export { default as TasksTabCrud } from './TasksTabCrud';
 export { default as FinancesTabCrud } from './FinancesTabCrud';

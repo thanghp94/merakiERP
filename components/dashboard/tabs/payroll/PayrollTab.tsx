@@ -78,6 +78,7 @@ export default function PayrollTab() {
     employee_id: '',
     payroll_period_id: '',
     base_salary: '',
+    social_insurance_salary: '',
     working_days: '26',
     actual_working_days: '26',
     allowances: {
@@ -105,6 +106,11 @@ export default function PayrollTab() {
     if (selectedPeriod) {
       loadRecords();
     }
+  }, [selectedPeriod]);
+
+  // Ensure recordForm.payroll_period_id is always synced with selectedPeriod
+  React.useEffect(() => {
+    setRecordForm((prev) => ({ ...prev, payroll_period_id: selectedPeriod }));
   }, [selectedPeriod]);
 
   const loadPeriods = async () => {
@@ -180,8 +186,7 @@ export default function PayrollTab() {
     }
   };
 
-  const handleCreateRecord = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateRecord = async () => {
     try {
       // Clean up allowances and bonuses - remove empty values
       const cleanAllowances = Object.fromEntries(
@@ -197,6 +202,7 @@ export default function PayrollTab() {
       const payload = {
         ...recordForm,
         base_salary: parseFloat(recordForm.base_salary),
+        insurance_base: parseFloat(recordForm.social_insurance_salary),
         working_days: parseInt(recordForm.working_days),
         actual_working_days: parseInt(recordForm.actual_working_days),
         dependents: parseInt(recordForm.dependents),
@@ -221,6 +227,7 @@ export default function PayrollTab() {
           employee_id: '',
           payroll_period_id: selectedPeriod,
           base_salary: '',
+          social_insurance_salary: '',
           working_days: '26',
           actual_working_days: '26',
           allowances: { transport: '', lunch: '', phone: '' },
@@ -452,6 +459,8 @@ export default function PayrollTab() {
         {selectedPeriod && (
           <button
             onClick={() => {
+              console.log('Button clicked, selectedPeriod:', selectedPeriod);
+              console.log('Setting recordForm and showCreateRecordForm');
               setRecordForm({...recordForm, payroll_period_id: selectedPeriod});
               setShowCreateRecordForm(true);
             }}
