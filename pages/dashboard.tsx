@@ -20,7 +20,7 @@ import BusinessTasksTab from '@/dashboard/tabs/tasks/BusinessTasksTab';
 import ScheduleTab from '@/dashboard/tabs/schedule/ScheduleTab';
 import ApiTestTab from '@/dashboard/tabs/api-test/ApiTestTab';
 import AdmissionsTab from '@/dashboard/tabs/admissions/AdmissionsTab';
-import AdmissionForm from '@/components/AdmissionForm';
+import AdmissionForm from '@/dashboard/tabs/admissions/AdmissionForm';
 import RequestsTab from '@/dashboard/tabs/requests/RequestsTab';
 
 export default function Dashboard() {

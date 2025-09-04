@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  BusinessTaskType, 
-  TaskCategory, 
+import {
+  BusinessTaskType,
+  TaskCategory,
   TaskPriority,
   TASK_CATEGORY_LABELS,
   TASK_PRIORITY_LABELS
-} from './dashboard/shared/types';
-import FormModal, { FormGrid, FormField } from './dashboard/shared/FormModal';
+} from '../../shared/types';
+import FormModal, { FormGrid, FormField } from '../../shared/FormModal';
 
 interface BusinessTaskFormProps {
   isOpen: boolean;

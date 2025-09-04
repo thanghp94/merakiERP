@@ -1,5 +1,5 @@
 import React from 'react';
-import AttendanceForm from '../../../AttendanceForm';
+import AttendanceForm from './AttendanceForm';
 import { Attendance } from '../../shared/types';
 import { formatDate, getStatusBadge } from '../../shared/utils';
 import { DataTable, TableColumn } from '../../shared';

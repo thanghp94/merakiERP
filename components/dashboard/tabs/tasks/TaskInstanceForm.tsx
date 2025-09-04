@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FormModal } from './dashboard/shared';
+import { FormModal } from '../../shared';
 
 interface TaskInstanceFormProps {
   isOpen: boolean;

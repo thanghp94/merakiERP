@@ -4,35 +4,48 @@ import { useFormWithValidation, commonSchemas } from '../../../../lib/hooks/useF
 import { FormGrid, FormField, EmployeeSelector } from '../index';
 import { RequestType, REQUEST_TYPE_LABELS } from '../types';
 
-// Request form validation schemas
-const baseRequestSchema = z.object({
+// Request form validation schemas - comprehensive schema with all possible fields
+const requestFormSchema = z.object({
   request_type: z.enum(['nghi_phep', 'doi_lich', 'tam_ung', 'mua_sam_sua_chua']),
   title: commonSchemas.requiredString('Tiêu đề'),
   description: commonSchemas.optionalString,
   created_by_employee_id: commonSchemas.requiredString('Nhân viên'),
-});
-
-const leaveRequestSchema = baseRequestSchema.extend({
-  from_date: commonSchemas.requiredString('Ngày bắt đầu'),
-  to_date: commonSchemas.requiredString('Ngày kết thúc'),
-  reason: commonSchemas.requiredString('Lý do nghỉ phép'),
-});
-
-const scheduleChangeSchema = baseRequestSchema.extend({
-  original_date: commonSchemas.requiredString('Ngày gốc'),
-  new_date: commonSchemas.requiredString('Ngày mới'),
-  class_affected: commonSchemas.optionalString,
-});
-
-const advancePaymentSchema = baseRequestSchema.extend({
-  amount: z.number().min(1, 'Số tiền phải lớn hơn 0'),
-  repayment_plan: commonSchemas.requiredString('Kế hoạch trả lại'),
-});
-
-const purchaseRepairSchema = baseRequestSchema.extend({
-  item_name: commonSchemas.requiredString('Tên vật phẩm'),
-  estimated_cost: z.number().min(1, 'Chi phí ước tính phải lớn hơn 0'),
-  vendor: commonSchemas.optionalString,
+  // Leave request fields
+  from_date: z.string().optional(),
+  to_date: z.string().optional(),
+  reason: z.string().optional(),
+  // Schedule change fields
+  original_date: z.string().optional(),
+  new_date: z.string().optional(),
+  class_affected: z.string().optional(),
+  // Advance payment fields
+  amount: z.number().optional(),
+  repayment_plan: z.string().optional(),
+  // Purchase/repair fields
+  item_name: z.string().optional(),
+  estimated_cost: z.number().optional(),
+  vendor: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Conditional validation based on request type
+  switch (data.request_type) {
+    case 'nghi_phep':
+      if (!data.from_date) ctx.addIssue({ code: 'custom', message: 'Ngày bắt đầu là bắt buộc', path: ['from_date'] });
+      if (!data.to_date) ctx.addIssue({ code: 'custom', message: 'Ngày kết thúc là bắt buộc', path: ['to_date'] });
+      if (!data.reason) ctx.addIssue({ code: 'custom', message: 'Lý do nghỉ phép là bắt buộc', path: ['reason'] });
+      break;
+    case 'doi_lich':
+      if (!data.original_date) ctx.addIssue({ code: 'custom', message: 'Ngày gốc là bắt buộc', path: ['original_date'] });
+      if (!data.new_date) ctx.addIssue({ code: 'custom', message: 'Ngày mới là bắt buộc', path: ['new_date'] });
+      break;
+    case 'tam_ung':
+      if (!data.amount || data.amount <= 0) ctx.addIssue({ code: 'custom', message: 'Số tiền phải lớn hơn 0', path: ['amount'] });
+      if (!data.repayment_plan) ctx.addIssue({ code: 'custom', message: 'Kế hoạch trả lại là bắt buộc', path: ['repayment_plan'] });
+      break;
+    case 'mua_sam_sua_chua':
+      if (!data.item_name) ctx.addIssue({ code: 'custom', message: 'Tên vật phẩm là bắt buộc', path: ['item_name'] });
+      if (!data.estimated_cost || data.estimated_cost <= 0) ctx.addIssue({ code: 'custom', message: 'Chi phí ước tính phải lớn hơn 0', path: ['estimated_cost'] });
+      break;
+  }
 });
 
 interface RequestFormProps {
@@ -50,46 +63,56 @@ const RequestForm: React.FC<RequestFormProps> = ({
 }) => {
   const [requestType, setRequestType] = useState<RequestType>('nghi_phep');
 
-  // Get the appropriate schema based on request type
+  // Get the comprehensive schema (includes all fields with conditional validation)
   const getSchema = () => {
+    return requestFormSchema;
+  };
+
+  const getDefaultValues = () => {
+    const baseValues = {
+      request_type: requestType,
+      title: '',
+      description: '',
+      created_by_employee_id: currentUserId || '',
+    };
+
     switch (requestType) {
       case 'nghi_phep':
-        return leaveRequestSchema;
+        return {
+          ...baseValues,
+          from_date: '',
+          to_date: '',
+          reason: '',
+        };
       case 'doi_lich':
-        return scheduleChangeSchema;
+        return {
+          ...baseValues,
+          original_date: '',
+          new_date: '',
+          class_affected: '',
+        };
       case 'tam_ung':
-        return advancePaymentSchema;
+        return {
+          ...baseValues,
+          amount: 0,
+          repayment_plan: '',
+        };
       case 'mua_sam_sua_chua':
-        return purchaseRepairSchema;
+        return {
+          ...baseValues,
+          item_name: '',
+          estimated_cost: 0,
+          vendor: '',
+        };
       default:
-        return baseRequestSchema;
+        return baseValues;
     }
   };
 
   const form = useFormWithValidation({
     schema: getSchema(),
-    defaultValues: {
-      request_type: requestType,
-      title: '',
-      description: '',
-      created_by_employee_id: currentUserId || '',
-      // Leave request fields
-      from_date: '',
-      to_date: '',
-      reason: '',
-      // Schedule change fields
-      original_date: '',
-      new_date: '',
-      class_affected: '',
-      // Advance payment fields
-      amount: 0,
-      repayment_plan: '',
-      // Purchase/repair fields
-      item_name: '',
-      estimated_cost: 0,
-      vendor: '',
-    },
-    onSubmit: async (data) => {
+    defaultValues: getDefaultValues(),
+    onSubmit: async (data: any) => {
       // Calculate total days for leave requests
       if (requestType === 'nghi_phep' && data.from_date && data.to_date) {
         const fromDate = new Date(data.from_date);
@@ -108,7 +131,8 @@ const RequestForm: React.FC<RequestFormProps> = ({
         request_data: getRequestSpecificData(data),
       };
 
-      return await onSubmit(requestData);
+      // Call the onSubmit function but don't return its result
+      await onSubmit(requestData);
     },
   });
 

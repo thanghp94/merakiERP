@@ -7,7 +7,7 @@ import { TabType, MainTabType, MainTab } from '@/shared/types';
 import { Card } from '@/components/ui';
 import Sidebar from '@/dashboard/shared/Sidebar';
 import PersonalTabWithSidebar from '@/dashboard/tabs/personal/PersonalTabWithSidebar';
-import TaskForm from '@/components/TaskForm';
+import TaskForm from '@/dashboard/tabs/tasks/TaskForm';
 import { Task } from '@/dashboard/shared/types';
 import { formatDate, getStatusBadge } from '@/dashboard/shared/utils';
 import { DataTable, TableColumn } from '@/dashboard/shared';

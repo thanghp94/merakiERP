@@ -31,7 +31,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({ onSubmit, onCancel, initi
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     if (name.startsWith('data.')) {
       const dataField = name.split('.')[1];
       setFormData(prev => ({

@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { 
-  ClassScheduleViewProps, 
+import {
+  ClassScheduleViewProps,
   ViewMode,
-  ScheduleHeader, 
+  ScheduleHeader,
   ScheduleGrid,
   useScheduleData,
   useEmployeeData,

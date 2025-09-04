@@ -6,10 +6,10 @@ interface TaskFormProps {
   isEditing?: boolean;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ 
-  onSubmit, 
-  initialData = {}, 
-  isEditing = false 
+const TaskForm: React.FC<TaskFormProps> = ({
+  onSubmit,
+  initialData = {},
+  isEditing = false
 }) => {
   const [formData, setFormData] = useState({
     title: initialData.title || '',
@@ -50,8 +50,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
       }
       if (employeesResult.success) {
         // Filter only teachers
-        const teachers = employeesResult.data.filter((emp: any) => 
-          emp.position?.toLowerCase().includes('teacher') || 
+        const teachers = employeesResult.data.filter((emp: any) =>
+          emp.position?.toLowerCase().includes('teacher') ||
           emp.position?.toLowerCase().includes('giáo viên')
         );
         setEmployees(teachers);
@@ -94,7 +94,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       };
 
       await onSubmit(submitData);
-      
+
       if (!isEditing) {
         // Reset form after successful creation
         setFormData({
@@ -145,7 +145,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         {isEditing ? 'Chỉnh sửa bài tập' : 'Tạo bài tập mới'}
       </h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <div className="space-y-4">
@@ -233,7 +233,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             <h3 className="text-sm font-medium text-gray-700 mb-2">Thông tin đã chọn:</h3>
             {getSelectedClass() && (
               <div className="text-sm text-gray-600 mb-2">
-                <strong>Lớp học:</strong> {getSelectedClass()?.class_name} - 
+                <strong>Lớp học:</strong> {getSelectedClass()?.class_name} -
                 Bắt đầu: {new Date(getSelectedClass()?.start_date).toLocaleDateString('vi-VN')}
               </div>
             )}
@@ -305,7 +305,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
         {/* Assignment Details */}
         <div className="border-t border-gray-200 pt-4">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Chi tiết bài tập</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label htmlFor="max_score" className="block text-sm font-medium text-gray-700 mb-1">
@@ -400,7 +400,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
           >
             {isSubmitting ? 'Đang xử lý...' : (isEditing ? 'Cập nhật' : 'Tạo bài tập')}
           </button>
-          
+
           <button
             type="button"
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"

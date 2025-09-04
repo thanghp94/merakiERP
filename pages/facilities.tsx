@@ -6,7 +6,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { TabType, MainTabType, MainTab, Facility } from '@/shared/types';
 import { Card } from '@/components/ui';
 import Sidebar from '@/dashboard/shared/Sidebar';
-import FacilitiesTabCrud from '@/dashboard/crud/FacilitiesTabCrud';
+import FacilitiesTabCrud from '@/components/dashboard/tabs/facilities/FacilitiesTabCrud';
 import FacilityDetailModal from '@/dashboard/tabs/facilities/FacilityDetailModal';
 import { getMainTabs, handleSubTabNavigation, handleMainTabClick } from '@/components/navigation/NavigationConfig';
 

@@ -188,7 +188,7 @@ export default function DataTable<T = any>({
                     className="px-3 py-1 text-sm font-medium min-w-[140px] w-auto sticky right-0 bg-white"
                     onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
                   >
-                    <div className="flex gap-1 justify-center items-center flex-nowrap">
+                    <div className="flex flex-wrap justify-start items-center space-x-1 space-y-0.5">
                       {actions
                         .filter(action => !action.show || action.show(row))
                         .map((action, actionIndex) => (

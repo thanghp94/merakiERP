@@ -7,7 +7,7 @@ import { TabType, MainTabType, MainTab, Admission } from '@/shared/types';
 import { Card } from '@/components/ui';
 import Sidebar from '@/dashboard/shared/Sidebar';
 import AdmissionsKanban from '@/dashboard/tabs/admissions/AdmissionsKanban';
-import AdmissionForm from '@/components/AdmissionForm';
+import AdmissionForm from '@/dashboard/tabs/admissions/AdmissionForm';
 import EmailTemplateModal from '@/components/EmailTemplateModal';
 import { getMainTabs, handleSubTabNavigation, handleMainTabClick } from '@/components/navigation/NavigationConfig';
 
@@ -24,7 +24,7 @@ export default function AdmissionsPage() {
   const [admissions, setAdmissions] = useState<Admission[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
   const [showAdmissionForm, setShowAdmissionForm] = useState(false);
 
   // Email modal state

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MainSessionModal from '../sessions/MainSessionModal';
 import GrapeSeedAutoSessionModal from './GrapeSeedAutoSessionModal';
 import TathAutoSessionModal from './TathAutoSessionModal';
-import ClassForm from '../../../ClassForm';
+import ClassForm from './ClassForm';
 import { Class, Facility, ProgramType, UnitOption } from '../../shared/types';
 import { formatDate, getStatusBadge, getNextSuggestedUnit } from '../../shared/utils';
 import { CrudTable, FilterBar, DataTable, FilterConfig, TableColumn, TableAction, FormModal, FormGrid, FormField } from '../../shared';
@@ -61,6 +61,9 @@ export default function ClassesTab({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [classToDelete, setClassToDelete] = useState<Class | null>(null);
 
+  // Enrollment counts state
+  const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
+
   // State for auto session modal
   const [showAutoSessionModal, setShowAutoSessionModal] = useState(false);
   const [selectedClassForAutoSession, setSelectedClassForAutoSession] = useState<Class | null>(null);
@@ -80,6 +83,35 @@ export default function ClassesTab({
     setShowAutoSessionModal(false);
     setSelectedClassForAutoSession(null);
   }, showAutoSessionModal);
+
+  // Fetch enrollment counts for current classes
+  useEffect(() => {
+    async function fetchEnrollmentCounts() {
+      if (classes.length === 0) {
+        setEnrollmentCounts({});
+        return;
+      }
+      try {
+        const classIds = classes.map(cls => cls.id);
+        // Fetch enrollments filtered by class IDs
+        const response = await fetch(`/api/enrollments?limit=1000`);
+        const result = await response.json();
+        if (result.success) {
+          const counts: Record<string, number> = {};
+          for (const clsId of classIds) {
+            counts[clsId] = result.data.filter((enr: any) => enr.class_id === clsId && enr.status === 'active').length;
+          }
+          setEnrollmentCounts(counts);
+        } else {
+          setEnrollmentCounts({});
+        }
+      } catch (error) {
+        console.error('Error fetching enrollment counts:', error);
+        setEnrollmentCounts({});
+      }
+    }
+    fetchEnrollmentCounts();
+  }, [classes]);
 
   // Handler functions for CRUD operations
   const handleViewClass = (classItem: Class) => {
@@ -282,34 +314,17 @@ export default function ClassesTab({
       {
         key: 'class_name',
         label: 'Tên lớp học',
-        render: (value, row) => (
-          <div>
-            <div className="text-sm font-medium text-gray-900">{value}</div>
-            {row.data?.description && (
-              <div className="text-sm text-gray-500 truncate max-w-xs">
-                {row.data.description}
+        render: (value, row) => {
+          const enrollmentCount = enrollmentCounts[row.id] || 0;
+          return (
+            <div>
+              <div className="text-sm font-medium text-gray-900">{value}</div>
+              <div className="text-sm text-gray-500 mt-1">
+                {`Cơ sở: ${row.facilities?.name || 'Chưa chọn cơ sở'} | Unit: ${row.data?.unit || '-'} | Số học sinh: ${enrollmentCount}`}
               </div>
-            )}
-          </div>
-        )
-      },
-      {
-        key: 'facilities',
-        label: 'Cơ sở',
-        render: (value, row) => (
-          <div className="text-sm text-gray-900">
-            {row.facilities?.name || 'Chưa chọn cơ sở'}
-          </div>
-        )
-      },
-      {
-        key: 'unit',
-        label: 'Unit',
-        render: (value, row) => (
-          <div className="text-sm text-gray-900">
-            {row.data?.unit || '-'}
-          </div>
-        )
+            </div>
+          );
+        }
       }
     ];
   };

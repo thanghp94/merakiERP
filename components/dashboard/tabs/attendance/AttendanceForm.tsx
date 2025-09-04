@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FormModal, FormGrid, FormField } from './dashboard/shared';
+import { FormModal, FormGrid, FormField } from '../../shared';
 
 interface AttendanceFormProps {
   onSubmit: (attendanceData: any) => void;

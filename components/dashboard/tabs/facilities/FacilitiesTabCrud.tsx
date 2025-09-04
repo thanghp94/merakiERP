@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { z } from 'zod';
-import { Facility } from '../shared/types';
-import { formatDate, getStatusBadge } from '../shared/utils';
+import { Facility } from '../../shared/types';
+import { formatDate, getStatusBadge } from '../../shared/utils';
 import { 
   CrudTable, 
   TableColumn, 
@@ -10,8 +10,8 @@ import {
   FormModal, 
   FormGrid, 
   FormField 
-} from '../shared';
-import { useFormWithValidation, commonSchemas, createFormData } from '../../../lib/hooks/useFormWithValidation';
+} from '../../shared';
+import { useFormWithValidation, commonSchemas, createFormData } from '../../../../lib/hooks/useFormWithValidation';
 
 interface FacilitiesTabCrudProps {
   facilities: Facility[];

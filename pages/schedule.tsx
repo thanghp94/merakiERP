@@ -1,5 +1,5 @@
 import React from 'react';
-import ClassScheduleView from '../components/ClassScheduleView';
+import ClassScheduleView from '../components/dashboard/tabs/schedule/ClassScheduleView';
 
 const SchedulePage: React.FC = () => {
   return (

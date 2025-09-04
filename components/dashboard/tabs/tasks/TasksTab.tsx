@@ -1,5 +1,5 @@
 import React from 'react';
-import TaskForm from '../../../TaskForm';
+import TaskForm from './TaskForm';
 import { Task } from '../../shared/types';
 import { formatDate, getStatusBadge } from '../../shared/utils';
 import { DataTable, TableColumn } from '../../shared';

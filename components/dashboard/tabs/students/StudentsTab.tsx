@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import StudentsTabCrud from '../../crud/StudentsTabCrud';
+import StudentsTabCrud from './StudentsTabCrud';
 import { Student } from '../../shared/types';
 
 interface StudentsTabProps {

@@ -169,9 +169,7 @@ async function getStudents(req: NextApiRequest, res: NextApiResponse) {
     processedData = Array.from(uniqueStudents.values());
   }
 
-  if (processedData && processedData.length > 0) {
-    console.log('First student invoices:', processedData[0].current_enrollments?.[0]?.invoices);
-  }
+
   return res.status(200).json({
     success: true,
     data: processedData,
