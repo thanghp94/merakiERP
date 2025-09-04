@@ -1,5 +1,5 @@
 import React from 'react';
-import { Student } from '../../shared/types';
+import { Student } from '@/components/dashboard/shared/types';
 import { formatDate, getStatusBadge } from '../../shared/utils';
 import { useEscapeKey } from '../../../../lib/hooks/useEscapeKey';
 

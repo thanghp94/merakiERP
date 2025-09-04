@@ -1,20 +1,19 @@
 import React from 'react';
 import { formatDate } from '@/shared/utils';
-import { FormField } from '@/dashboard/shared';
-import FileUpload from '@/dashboard/shared/FileUpload';
+import { FormField, FileUpload } from '../../shared';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { EmployeesFormModalProps, EMPLOYEE_STATUSES, NATIONALITIES } from './types/employees.types';
-import { useEmployeesForm } from './hooks/useEmployeesForm';
+import { ForeignTeachersFormModalProps, EMPLOYEE_STATUSES, NATIONALITIES } from './types/foreign-teachers.types';
+import { useForeignTeachersForm } from './hooks/useForeignTeachersForm';
 
-export default function EmployeesFormModal({
+export default function ForeignTeachersFormModal({
   modalState,
   onClose,
   onSubmit,
   positionOptions,
   departmentOptions,
   isLoadingEnums
-}: EmployeesFormModalProps) {
-  const { form, showCustomNationality, avatarFile, setAvatarFile, handleNationalityChange } = useEmployeesForm(
+}: ForeignTeachersFormModalProps) {
+  const { form, showCustomNationality, avatarFile, setAvatarFile, handleNationalityChange } = useForeignTeachersForm(
     modalState,
     onSubmit,
     onClose
@@ -38,18 +37,18 @@ export default function EmployeesFormModal({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-blue-600 text-xl">👨‍💼</span>
+              <span className="text-blue-600 text-xl">👨‍🏫</span>
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                {modalState.mode === 'create' ? 'Thêm nhân viên mới' :
-                 modalState.mode === 'edit' ? 'Chỉnh sửa nhân viên' :
-                 'Chi tiết nhân viên'}
+                {modalState.mode === 'create' ? 'Thêm giáo viên nước ngoài mới' :
+                 modalState.mode === 'edit' ? 'Chỉnh sửa giáo viên nước ngoài' :
+                 'Chi tiết giáo viên nước ngoài'}
               </h2>
               <p className="text-sm text-gray-500">
-                {modalState.mode === 'create' ? 'Nhập thông tin nhân viên mới' :
-                 modalState.mode === 'edit' ? 'Cập nhật thông tin nhân viên' :
-                 'Xem thông tin chi tiết về nhân viên'}
+                {modalState.mode === 'create' ? 'Nhập thông tin giáo viên nước ngoài mới' :
+                 modalState.mode === 'edit' ? 'Cập nhật thông tin giáo viên nước ngoài' :
+                 'Xem thông tin chi tiết về giáo viên nước ngoài'}
               </p>
             </div>
           </div>
@@ -219,7 +218,7 @@ export default function EmployeesFormModal({
                   Thông tin giấy tờ
                 </h3>
 
-                <FormField label="Số CCCD/CMND">
+                <FormField label="Số Passport">
                   <input
                     {...form.register('id_number')}
                     type="text"
@@ -229,7 +228,7 @@ export default function EmployeesFormModal({
                   />
                 </FormField>
 
-                <FormField label="Ngày cấp CCCD">
+                <FormField label="Ngày cấp">
                   <input
                     {...form.register('id_issue_date')}
                     type="date"
@@ -238,7 +237,7 @@ export default function EmployeesFormModal({
                   />
                 </FormField>
 
-                <FormField label="Ngày hết hạn CCCD">
+                <FormField label="Ngày hết hạn Passport">
                   <input
                     {...form.register('id_expiry_date')}
                     type="date"
@@ -257,16 +256,32 @@ export default function EmployeesFormModal({
                   />
                 </FormField>
 
-                <FormField label="Quốc tịch">
+                <FormField label="Quốc tịch" required>
                   <select
                     {...form.register('nationality')}
                     disabled={isReadOnly}
-                    defaultValue="Việt Nam"
                     className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${isReadOnly ? 'bg-gray-50' : ''}`}
                     onChange={(e) => handleNationalityChange(e.target.value)}
                   >
-                    <option value="Việt Nam">Việt Nam</option>
+                    <option value="">Chọn quốc tịch</option>
+                    {Object.entries(NATIONALITIES).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
                   </select>
+                  {form.formState.errors.nationality && (
+                    <p className="mt-1 text-xs text-red-600">{form.formState.errors.nationality.message}</p>
+                  )}
+                  {showCustomNationality && (
+                    <input
+                      {...form.register('customNationality')}
+                      type="text"
+                      disabled={isReadOnly}
+                      className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 mt-2 ${isReadOnly ? 'bg-gray-50' : ''}`}
+                      placeholder="Nhập quốc tịch khác"
+                    />
+                  )}
                 </FormField>
               </div>
             </div>
@@ -297,7 +312,7 @@ export default function EmployeesFormModal({
                     rows={3}
                     disabled={isReadOnly}
                     className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${isReadOnly ? 'bg-gray-50' : ''}`}
-                    placeholder="Ghi chú thêm về nhân viên"
+                    placeholder="Ghi chú thêm về giáo viên nước ngoài"
                   />
                 </FormField>
               </div>

@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { TabType, MainTabType, MainTab, SubTab, Student } from '@/shared/types';
+import { TabType, MainTabType, MainTab, SubTab, Student } from '@/components/dashboard/shared/types';
 import { Card } from '@/components/ui';
 import Sidebar from '@/dashboard/shared/Sidebar';
 import StudentDetailModal from '@/dashboard/tabs/students/StudentDetailModal';
@@ -26,11 +27,29 @@ export default function StudentPage() {
       const savedActiveTab = localStorage.getItem('student-active-tab') as TabType;
       const savedActiveMainTab = localStorage.getItem('student-active-main-tab') as MainTabType;
 
-      if (savedActiveTab) {
+      console.log('Saved activeTab from localStorage:', savedActiveTab);
+      console.log('Saved activeMainTab from localStorage:', savedActiveMainTab);
+
+      // Validate saved tab values
+      const validTabs: TabType[] = ['students', 'tuition'];
+      const validMainTabs: MainTabType[] = ['khachhang'];
+
+      if (savedActiveTab && validTabs.includes(savedActiveTab)) {
+        console.log('Setting activeTab to:', savedActiveTab);
         setActiveTab(savedActiveTab);
+      } else {
+        console.log('Invalid or missing savedActiveTab, defaulting to students');
+        setActiveTab('students');
+        localStorage.setItem('student-active-tab', 'students');
       }
-      if (savedActiveMainTab) {
+
+      if (savedActiveMainTab && validMainTabs.includes(savedActiveMainTab)) {
+        console.log('Setting activeMainTab to:', savedActiveMainTab);
         setActiveMainTab(savedActiveMainTab);
+      } else {
+        console.log('Invalid or missing savedActiveMainTab, defaulting to khachhang');
+        setActiveMainTab('khachhang');
+        localStorage.setItem('student-active-main-tab', 'khachhang');
       }
     }
   }, []);
@@ -191,12 +210,19 @@ export default function StudentPage() {
             showStudentForm={showStudentForm}
             setShowStudentForm={setShowStudentForm}
             onViewStudent={handleStudentView}
+            students={students}
+            isLoadingStudents={isLoadingStudents}
+            onRefreshStudents={fetchStudents}
           />
         );
       case 'tuition':
         return <TuitionTab />;
       default:
-        return <div>Tab not found</div>;
+        return (
+          <div className="p-6 text-center">
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        );
     }
   };
 

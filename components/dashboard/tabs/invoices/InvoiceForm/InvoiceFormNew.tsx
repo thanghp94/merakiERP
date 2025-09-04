@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useInvoiceForm } from './useInvoiceForm';
 
 interface InvoiceItem {
   item_name: string;
@@ -51,29 +52,18 @@ interface InvoiceFormNewProps {
 }
 
 export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: InvoiceFormNewProps) {
-  const [formData, setFormData] = useState<FormData>({
-    invoice_type: 'standard',
-    is_income: true,
-    student_id: '',
-    employee_id: '',
-    facility_id: '',
-    class_id: '',
-    invoice_date: new Date().toISOString().split('T')[0],
-    due_date: '',
-    description: '',
-    notes: '',
-    subtotal: 0,
-    tax_rate: 0,
-    tax_amount: 0,
-    discount_amount: 0,
-    total_amount: 0,
-    items: [],
-    create_payment: false,
-    payment_method: 'cash',
-    payment_amount: 0,
-    payment_date: new Date().toISOString().split('T')[0],
-    reference_number: ''
-  });
+  const {
+    formData,
+    handleInputChange,
+    handleIncomeTypeChange,
+    addItem,
+    updateItem,
+    removeItem,
+    handleSubmit,
+    incomeCategories,
+    expenseCategories,
+    setFormData,
+  } = useInvoiceForm(initialData);
 
   const [students, setStudents] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -201,102 +191,22 @@ export default function InvoiceFormNew({ onSubmit, onCancel, initialData }: Invo
     }));
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    const finalValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: finalValue
-    }));
-  };
 
-  const handleIncomeTypeChange = (is_income: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      is_income,
-      invoice_type: is_income ? 'tuition' : 'expense',
-      // Reset related fields
-      student_id: is_income ? prev.student_id : '',
-      employee_id: is_income ? '' : prev.employee_id,
-      items: [] // Reset items when changing type
-    }));
-  };
 
-  const addItem = () => {
-    const newItem: InvoiceItem = {
-      item_name: '',
-      item_description: '',
-      category: '',
-      quantity: 1,
-      unit_price: 0,
-      total_amount: 0
-    };
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, newItem]
-    }));
-  };
 
-  const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
-    const updatedItems = [...formData.items];
-    updatedItems[index] = {
-      ...updatedItems[index],
-      [field]: value
-    };
 
-    // Auto-calculate total_amount when quantity or unit_price changes
-    if (field === 'quantity' || field === 'unit_price') {
-      updatedItems[index].total_amount = updatedItems[index].quantity * updatedItems[index].unit_price;
-    }
 
-    setFormData(prev => ({
-      ...prev,
-      items: updatedItems
-    }));
-  };
 
-  const removeItem = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
 
-    try {
-      // Prepare invoice data with proper date handling
-      const invoiceData = {
-        ...formData,
-        // Only include relevant IDs based on income type
-        student_id: formData.is_income ? formData.student_id || null : null,
-        employee_id: !formData.is_income ? formData.employee_id || null : null,
-        facility_id: formData.facility_id || null,
-        class_id: formData.class_id || null,
-        // Ensure dates are properly formatted or null
-        invoice_date: formData.invoice_date || new Date().toISOString().split('T')[0],
-        due_date: formData.due_date || null,
-        // Ensure payment date is properly formatted if payment is being created
-        payment_date: formData.create_payment ? (formData.payment_date || new Date().toISOString().split('T')[0]) : null,
-      };
 
-      await onSubmit(invoiceData);
-    } catch (error) {
-      console.error('Error submitting invoice:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const incomeCategories = categories.filter(cat => cat.type === 'income');
-  const expenseCategories = categories.filter(cat => cat.type === 'expense');
-  const availableCategories = formData.is_income ? incomeCategories : expenseCategories;
+
+
+
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
+    <form onSubmit={(e) => handleSubmit(e, async (data) => await onSubmit(data))} className="space-y-2">
         {/* Invoice Type Selection - Compact */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
         <div className="flex items-center space-x-5">

@@ -28,7 +28,7 @@ const DayColumn: React.FC<DayColumnProps> = ({
   
   if (daySessions.length === 0) {
     return (
-      <div className="flex-1 border border-gray-300">
+      <div className="w-20 flex-shrink-0 border border-gray-300">
         <div className="bg-gray-50 p-2 text-center border-b border-gray-300">
           <div className="font-semibold text-sm">{dayName.toUpperCase()}</div>
           <div className="text-xs text-gray-600">{date}</div>
@@ -69,7 +69,7 @@ const DayColumn: React.FC<DayColumnProps> = ({
         return (
           <div 
             key={`${date}-${timeSlot}`} 
-            className="flex border-b border-gray-300 min-h-[80px]"
+            className="flex border-b border-gray-300 min-h-[140px]"
           >
             {/* Time column showing actual class time */}
             <div className="w-16 p-2 border-r border-gray-300 text-sm font-medium bg-gray-50 flex items-center">

@@ -1,4 +1,4 @@
-export type TabType = 'personal' | 'facilities' | 'classes' | 'employees' | 'students' | 'tuition' | 'sessions' | 'attendance' | 'finances' | 'payroll' | 'tasks' | 'business-tasks' | 'schedule' | 'admissions' | 'requests' | 'api-test';
+export type TabType = 'personal' | 'facilities' | 'classes' | 'employees' | 'foreign-teachers' | 'students' | 'tuition' | 'sessions' | 'attendance' | 'finances' | 'payroll' | 'tasks' | 'business-tasks' | 'schedule' | 'admissions' | 'requests' | 'api-test';
 
 export type MainTabType = 'vanhanh' | 'khachhang' | 'taichinh' | 'hcns';
 

@@ -10,6 +10,7 @@ export { default as ActionButton } from './ActionButton';
 export type { ActionButtonProps } from './ActionButton';
 export { default as FormModal, FormGrid, FormField } from './FormModal';
 export type { FormModalProps, FormGridProps, FormFieldProps } from './FormModal';
+export { default as FileUpload } from './FileUpload';
 
 // New reusable components
 export { default as EmployeeSelector, TeacherSelector, TeachingAssistantSelector } from './selectors/EmployeeSelector';

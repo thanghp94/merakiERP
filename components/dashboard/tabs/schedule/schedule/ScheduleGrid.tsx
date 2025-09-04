@@ -15,6 +15,18 @@ interface ScheduleGridProps {
   onUpdateSession: (sessionId: string, updates: Partial<Session>) => void;
 }
 
+interface DayColumnProps {
+  date: string;
+  dayName: string;
+  sessions: Session[];
+  editingSession: string | null;
+  teachers: Employee[];
+  teachingAssistants: Employee[];
+  onEditSession: (sessionId: string) => void;
+  onUpdateSession: (sessionId: string, updates: Partial<Session>) => void;
+  hasSessions?: boolean;
+}
+
 const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   sessions,
   viewMode,
@@ -56,24 +68,33 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       </div>
     );
   } else {
-    // Week view - show all 7 days
+    // Week view - show all 7 days with dynamic widths
     const weekDates = getWeekDates(startDate);
 
     return (
       <div className="flex">
-        {weekDays.map((dayName, index) => (
-          <DayColumn
-            key={weekDates[index]}
-            date={weekDates[index]}
-            dayName={dayName}
-            sessions={sessions}
-            editingSession={editingSession}
-            teachers={teachers}
-            teachingAssistants={teachingAssistants}
-            onEditSession={onEditSession}
-            onUpdateSession={onUpdateSession}
-          />
-        ))}
+        {weekDays.map((dayName, index) => {
+          // Check if this day has any sessions
+          const dayDate = weekDates[index];
+          const hasSessions = sessions.some(session => 
+            session.start_time.split('T')[0] === dayDate
+          );
+
+          return (
+            <DayColumn
+              key={weekDates[index]}
+              date={weekDates[index]}
+              dayName={dayName}
+              sessions={sessions}
+              editingSession={editingSession}
+              teachers={teachers}
+              teachingAssistants={teachingAssistants}
+              onEditSession={onEditSession}
+              onUpdateSession={onUpdateSession}
+              hasSessions={hasSessions}
+            />
+          );
+        })}
       </div>
     );
   }

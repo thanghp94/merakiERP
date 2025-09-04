@@ -1,397 +1,451 @@
 import React, { useState, useEffect } from 'react';
+import { FilterBar, FilterConfig } from '../../shared';
 
-interface Invoice {
+interface StudentWithInvoice {
   id: string;
-  amount: number;
-  outstanding_amount: number;
-  payment_status: string;
-  due_date: string;
-  created_at: string;
-  class_id: string;
-  student_id: string;
-}
-
-interface Student {
-  id: string;
-  name: string;
-  full_name?: string;
+  full_name: string;
   email?: string;
   phone?: string;
-  facility_id?: string;
-  facility_name?: string;
-  enrollment_date?: string;
-  tuition_fee?: number;
-  payment_status?: string;
-  due_date?: string;
-  outstanding_amount?: number;
-  invoices?: Invoice[];
+  facility?: {
+    id: string;
+    name: string;
+  };
+  class?: {
+    id: string;
+    class_name: string;
+    program_type?: string;
+  };
+  pending_invoices: Array<{
+    id: string;
+    invoice_number: string;
+    invoice_date: string;
+    due_date?: string;
+    total_amount: number;
+    remaining_amount: number;
+    status: string;
+    is_overdue: boolean;
+  }>;
+  total_pending_amount: number;
+  has_overdue: boolean;
 }
 
-interface Facility {
-  id: string;
-  name: string;
+interface TuitionTabProps {
+  onViewStudent?: (student: any) => void;
 }
 
-export default function TuitionTab(): JSX.Element {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [facilities, setFacilities] = useState<Facility[]>([]);
+export default function TuitionTab({ onViewStudent }: TuitionTabProps) {
+  const [studentsWithInvoices, setStudentsWithInvoices] = useState<StudentWithInvoice[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<StudentWithInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedFacility, setSelectedFacility] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [facilities, setFacilities] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterFacility, setFilterFacility] = useState('all');
+  const [filterClass, setFilterClass] = useState('all');
+  const [filterProgram, setFilterProgram] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
-    fetchStudents();
-    fetchFacilities();
-  }, [selectedFacility, selectedStatus, selectedMonth, selectedYear]);
+    fetchData();
+  }, []);
 
-  const fetchStudents = async () => {
+  useEffect(() => {
+    applyFilters();
+  }, [studentsWithInvoices, searchTerm, filterFacility, filterClass, filterProgram, filterStatus]);
+
+  const fetchData = async () => {
     setIsLoading(true);
-    setError(null);
     try {
-      const params = new URLSearchParams();
-      params.append('limit', '1000');
+      const [studentsRes, facilitiesRes, classesRes] = await Promise.all([
+        fetch('/api/students/pending-invoices'),
+        fetch('/api/facilities'),
+        fetch('/api/classes')
+      ]);
 
-      if (selectedFacility) {
-        params.append('facility_id', selectedFacility);
-      }
-      if (selectedStatus) {
-        params.append('payment_status', selectedStatus);
-      }
-      if (selectedMonth && selectedYear) {
-        params.append('due_month', selectedMonth.toString());
-        params.append('due_year', selectedYear.toString());
-      }
+      const [studentsData, facilitiesData, classesData] = await Promise.all([
+        studentsRes.json(),
+        facilitiesRes.json(),
+        classesRes.json()
+      ]);
 
-      const url = `/api/students?${params.toString()}`;
-
-      const response = await fetch(url);
-      const result = await response.json();
-
-      if (result.success) {
-        setStudents(result.data || []);
-      } else {
-        setError(result.message || 'Failed to fetch students');
-        setStudents([]);
+      if (studentsData.success) {
+        setStudentsWithInvoices(studentsData.data || []);
       }
-    } catch (err) {
-      setError('Error fetching students');
-      setStudents([]);
+      if (facilitiesData.success) {
+        setFacilities(facilitiesData.data || []);
+      }
+      if (classesData.success) {
+        setClasses(classesData.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching tuition data:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchFacilities = async () => {
-    try {
-      const response = await fetch('/api/facilities');
-      const result = await response.json();
+  const applyFilters = () => {
+    let filtered = [...studentsWithInvoices];
 
-      if (result.success) {
-        setFacilities(result.data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching facilities:', err);
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(student =>
+        student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Facility filter
+    if (filterFacility !== 'all') {
+      filtered = filtered.filter(student => student.facility?.id === filterFacility);
+    }
+
+    // Class filter
+    if (filterClass !== 'all') {
+      filtered = filtered.filter(student => student.class?.id === filterClass);
+    }
+
+    // Program filter
+    if (filterProgram !== 'all') {
+      filtered = filtered.filter(student => student.class?.program_type === filterProgram);
+    }
+
+    // Status filter
+    if (filterStatus === 'overdue') {
+      filtered = filtered.filter(student => student.has_overdue);
+    } else if (filterStatus === 'pending') {
+      filtered = filtered.filter(student => !student.has_overdue);
+    }
+
+    setFilteredStudents(filtered);
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    switch (key) {
+      case 'search':
+        setSearchTerm(value);
+        break;
+      case 'facility':
+        setFilterFacility(value);
+        break;
+      case 'class':
+        setFilterClass(value);
+        break;
+      case 'program':
+        setFilterProgram(value);
+        break;
+      case 'status':
+        setFilterStatus(value);
+        break;
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount);
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilterFacility('all');
+    setFilterClass('all');
+    setFilterProgram('all');
+    setFilterStatus('all');
   };
 
-  const getInvoiceStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { label: 'Nháp', color: 'bg-gray-100 text-gray-800' },
-      sent: { label: 'Đã gửi', color: 'bg-blue-100 text-blue-800' },
-      partial: { label: 'Thanh toán một phần', color: 'bg-yellow-100 text-yellow-800' },
-      paid: { label: 'Đã thanh toán', color: 'bg-green-100 text-green-800' },
-      overdue: { label: 'Quá hạn', color: 'bg-red-100 text-red-800' },
-      cancelled: { label: 'Đã hủy', color: 'bg-gray-100 text-gray-800' }
+  // Calculate summary
+  const totalReceivable = filteredStudents.reduce((sum, student) => sum + student.total_pending_amount, 0);
+  const overdueCount = filteredStudents.filter(student => student.has_overdue).length;
+  const totalOverdue = filteredStudents
+    .filter(student => student.has_overdue)
+    .reduce((sum, student) => sum + student.total_pending_amount, 0);
+
+  const getFilterConfig = (): FilterConfig[] => {
+    return [
+      {
+        key: 'search',
+        label: 'Tìm kiếm',
+        options: []
+      },
+      {
+        key: 'facility',
+        label: 'Cơ sở',
+        options: [
+          { value: 'all', label: 'Tất cả cơ sở' },
+          ...facilities.map(facility => ({
+            value: facility.id,
+            label: facility.name
+          }))
+        ]
+      },
+      {
+        key: 'class',
+        label: 'Lớp',
+        options: [
+          { value: 'all', label: 'Tất cả lớp' },
+          ...classes.map(cls => ({
+            value: cls.id,
+            label: cls.class_name
+          }))
+        ]
+      },
+      {
+        key: 'program',
+        label: 'Chương trình',
+        options: [
+          { value: 'all', label: 'Tất cả chương trình' },
+          { value: 'GrapeSEED', label: 'GrapeSEED' },
+          { value: 'Pre-WSC', label: 'Pre-WSC' },
+          { value: 'WSC', label: 'WSC' },
+          { value: 'Tiếng Anh Tiểu Học', label: 'Tiếng Anh Tiểu Học' },
+          { value: 'Gavel club', label: 'Gavel club' }
+        ]
+      },
+      {
+        key: 'status',
+        label: 'Trạng thái',
+        options: [
+          { value: 'all', label: 'Tất cả' },
+          { value: 'pending', label: 'Chưa quá hạn' },
+          { value: 'overdue', label: 'Quá hạn' }
+        ]
+      }
+    ];
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('vi-VN');
+  };
+
+  const getStatusBadge = (status: string, isOverdue: boolean) => {
+    if (isOverdue) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          Quá hạn
+        </span>
+      );
+    }
+    
+    const statusMap: { [key: string]: { bg: string; text: string; label: string } } = {
+      'sent': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Đã gửi' },
+      'partial': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Một phần' },
+      'draft': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Nháp' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] ||
-                  { label: status, color: 'bg-gray-100 text-gray-800' };
+    const statusInfo = statusMap[status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
 
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        {config.label}
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.text}`}>
+        {statusInfo.label}
       </span>
     );
   };
 
-  const getInvoiceTypeLabel = (type: string) => {
-    const labels: { [key: string]: string } = {
-      'tuition': 'Học phí',
-      'standard': 'Dịch vụ',
-      'payroll': 'Lương',
-      'expense': 'Chi phí'
-    };
-    return labels[type] || type;
-  };
-
-  // Calculate summary statistics
-  // Map students to include facility_name from current_enrollments.classes.facilities.name if available
-  // Also calculate total outstanding amount from all invoices for the student
-  const studentsWithFacility = students.map((student: any) => {
-    let facilityName = 'Chưa xác định cơ sở';
-    let studentName = student.full_name || student.name || 'Chưa xác định tên';
-    let totalOutstandingAmount = 0;
-
-    if (student.invoices && student.invoices.length > 0) {
-      // Exclude draft invoices from outstanding amount calculation
-      const validInvoices = student.invoices.filter((invoice: any) => invoice.payment_status !== 'draft');
-      totalOutstandingAmount = validInvoices.reduce((sum: number, invoice: any) => sum + (invoice.outstanding_amount || 0), 0);
-    }
-
-    if (student.current_enrollments && student.current_enrollments.length > 0) {
-      const firstEnrollment = student.current_enrollments[0];
-      if (firstEnrollment.classes && firstEnrollment.classes.facilities) {
-        facilityName = firstEnrollment.classes.facilities.name || facilityName;
-      }
-    }
-
-    return {
-      ...student,
-      facility_name: facilityName,
-      full_name: studentName,
-      outstanding_amount: totalOutstandingAmount,
-    };
-  });
-
-  // Remove total tuition, total paid, total pending as no longer used
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-sm text-gray-500">Đang tải dữ liệu học phí...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center py-12">
-          <div className="text-red-500 mb-4">
-            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Lỗi tải dữ liệu</h3>
-          <p className="text-sm text-gray-500 mb-4">{error}</p>
-          <button
-            onClick={fetchStudents}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Thử lại
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cơ sở</label>
-            <select
-              value={selectedFacility}
-              onChange={(e) => setSelectedFacility(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Tất cả cơ sở</option>
-              {facilities.map((facility) => (
-                <option key={facility.id} value={facility.id}>
-                  {facility.name}
-                </option>
-              ))}
-            </select>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm">👥</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-blue-800">Học sinh có công nợ</p>
+              <p className="text-lg font-semibold text-blue-900">
+                {filteredStudents.length} học sinh
+              </p>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="paid">Đã thanh toán</option>
-              <option value="pending">Chưa thanh toán</option>
-              <option value="partial">Thanh toán một phần</option>
-            </select>
+        </div>
+
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm">💰</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-orange-800">Tổng công nợ</p>
+              <p className="text-lg font-semibold text-orange-900">
+                {totalReceivable.toLocaleString('vi-VN')} ₫
+              </p>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tháng</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                <option key={month} value={month}>
-                  Tháng {month}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Năm</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm">⚠️</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-800">Quá hạn</p>
+              <p className="text-lg font-semibold text-red-900">
+                {overdueCount} học sinh
+              </p>
+              <p className="text-sm text-red-700">
+                {totalOverdue.toLocaleString('vi-VN')} ₫
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Remove summary cards */}
+      {/* Filter Bar */}
+      <FilterBar
+        filters={{
+          search: searchTerm,
+          facility: filterFacility,
+          class: filterClass,
+          program: filterProgram,
+          status: filterStatus
+        }}
+        filterConfigs={getFilterConfig()}
+        onFilterChange={handleFilterChange}
+        onClearFilters={handleClearFilters}
+        isLoading={isLoading}
+      />
 
-      {/* Students List */}
-      {studentsWithFacility.length === 0 ? (
-        <div className="text-center py-12">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Chưa có học sinh nào</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Không tìm thấy học sinh nào với bộ lọc hiện tại.
-          </p>
+      {/* Students Table */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">
+            Danh sách học sinh có công nợ ({filteredStudents.length})
+          </h3>
         </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Danh sách học sinh</h3>
-            <button
-              onClick={fetchStudents}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Làm mới
-            </button>
+
+        {isLoading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-gray-600">Đang tải danh sách...</p>
           </div>
-
-          {studentsWithFacility.map((student) => (
-            <div key={student.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => {
-              setSelectedStudent(student);
-              setIsModalOpen(true);
-            }}>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {student.full_name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {student.facility_name || 'Chưa xác định cơ sở'} - {
-                          student.enrollment_date ?
-                          new Date(student.enrollment_date).toLocaleDateString('vi-VN') :
-                          'Chưa xác định'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">{formatCurrency(student.outstanding_amount || 0)}</span>
-                      {student.outstanding_amount && student.outstanding_amount > 0 && (
-                        <span className="ml-2 text-red-600">
-                          (Còn nợ)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+        ) : filteredStudents.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="text-gray-400 mb-4">
+              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Invoice Detail Modal */}
-      {isModalOpen && selectedStudent && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onClick={() => setIsModalOpen(false)}>
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white" onClick={(e) => e.stopPropagation()}>
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Hóa đơn của {selectedStudent.full_name}
-                </h3>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="space-y-4">
-                {selectedStudent.invoices && selectedStudent.invoices.length > 0 ? (
-                  selectedStudent.invoices.map((invoice) => (
-                    <div key={invoice.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
+            <h4 className="text-lg font-medium text-gray-900 mb-2">Không có học sinh nào có công nợ</h4>
+            <p className="text-gray-600">Tất cả học sinh đã thanh toán đầy đủ học phí.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Học sinh
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Lớp/Chương trình
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cơ sở
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Số hóa đơn chưa thanh toán
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tổng công nợ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trạng thái
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredStudents.map((student) => (
+                  <tr 
+                    key={student.id} 
+                    className={`hover:bg-gray-50 ${student.has_overdue ? 'bg-red-50' : ''}`}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            Hóa đơn #{invoice.id}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Ngày tạo: {new Date(invoice.created_at).toLocaleDateString('vi-VN')}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Ngày đến hạn: {new Date(invoice.due_date).toLocaleDateString('vi-VN')}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">
-                            {formatCurrency(invoice.amount)}
-                          </p>
-                          <p className="text-sm text-red-600">
-                            Còn nợ: {formatCurrency(invoice.outstanding_amount)}
-                          </p>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            invoice.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
-                            invoice.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {invoice.payment_status === 'paid' ? 'Đã thanh toán' :
-                             invoice.payment_status === 'partial' ? 'Thanh toán một phần' :
-                             'Chưa thanh toán'}
-                          </span>
+                          <div className="text-sm font-medium text-gray-900">
+                            {student.full_name}
+                          </div>
+                          {student.email && (
+                            <div className="text-sm text-gray-500">
+                              {student.email}
+                            </div>
+                          )}
+                          {student.phone && (
+                            <div className="text-sm text-gray-500">
+                              {student.phone}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">Không có hóa đơn nào.</p>
-                )}
-              </div>
-            </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {student.class?.class_name || '-'}
+                      </div>
+                      {student.class?.program_type && (
+                        <div className="text-sm text-gray-500">
+                          {student.class.program_type}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {student.facility?.name || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {student.pending_invoices.length} hóa đơn
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {student.pending_invoices.map(invoice => (
+                          <div key={invoice.id} className="flex justify-between">
+                            <span>{invoice.invoice_number}</span>
+                            <span>{invoice.remaining_amount.toLocaleString('vi-VN')} ₫</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm font-medium ${student.has_overdue ? 'text-red-600' : 'text-orange-600'}`}>
+                        {student.total_pending_amount.toLocaleString('vi-VN')} ₫
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {student.has_overdue ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Quá hạn
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Chưa thanh toán
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => onViewStudent?.(student)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Chi tiết
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

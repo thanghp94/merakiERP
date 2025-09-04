@@ -30,7 +30,7 @@ export const useEmployeesForm = (
       experience: '',
       qualifications: '',
       date_of_birth: '',
-      nationality: '',
+      nationality: 'Việt Nam',
       customNationality: '',
       notes: '',
     },
@@ -93,6 +93,7 @@ export const useEmployeesForm = (
       setShowCustomNationality(employee.data?.nationality === 'other');
     } else if (modalState.isOpen && modalState.mode === 'create') {
       form.resetForm();
+      form.setValue('nationality', 'Việt Nam');
       setShowCustomNationality(false);
     }
   }, [modalState.isOpen, modalState.mode, modalState.employee]);

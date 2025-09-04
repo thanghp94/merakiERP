@@ -1,26 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import EmployeesTabCrud from './EmployeesCrudContainer';
-import WorkScheduleModal from './WorkScheduleModal';
-import { Employee } from '../../shared/types';
+import ForeignTeachersCrudContainer from './ForeignTeachersCrudContainer';
+import WorkScheduleModal from '../employees/WorkScheduleModal';
+import { Employee } from '@/shared/types';
 
-
-interface EmployeesTabProps {
-  showEmployeeForm: boolean;
-  setShowEmployeeForm: (show: boolean) => void;
+interface ForeignTeachersTabProps {
+  showForeignTeacherForm: boolean;
+  setShowForeignTeacherForm: (show: boolean) => void;
   employees: Employee[];
   isLoadingEmployees: boolean;
   handleFormSubmit: (data: any, formType: string) => void;
   onViewEmployee?: (employee: Employee) => void;
 }
 
-export default function EmployeesTab({
-  showEmployeeForm,
-  setShowEmployeeForm,
+export default function ForeignTeachersTab({
+  showForeignTeacherForm,
+  setShowForeignTeacherForm,
   employees,
   isLoadingEmployees,
   handleFormSubmit,
   onViewEmployee
-}: EmployeesTabProps): JSX.Element {
+}: ForeignTeachersTabProps): JSX.Element {
   const [workScheduleModal, setWorkScheduleModal] = useState<{
     isOpen: boolean;
     employee: Employee | null;
@@ -29,13 +28,18 @@ export default function EmployeesTab({
     employee: null
   });
 
-  // Filter employees to show only Vietnamese nationality
+  // Filter employees to show only foreign teachers (non-Vietnamese)
+  const foreignTeachers = employees.filter(employee =>
+    employee.data?.nationality && employee.data.nationality.toLowerCase() !== 'vietnamese'
+  );
+
+  // Filter employees to show only Vietnamese nationality for nhân viên
   const vietnameseEmployees = employees.filter(employee =>
     employee.data?.nationality && employee.data.nationality.toLowerCase() === 'vietnamese'
   );
 
   const handleSubmit = async (data: any, formType: string): Promise<void> => {
-    if (formType === 'RefreshEmployees') {
+    if (formType === 'RefreshForeignTeachers') {
       // Just refresh the employees list - this would be handled by parent component
       return;
     }
@@ -47,7 +51,7 @@ export default function EmployeesTab({
     if (onViewEmployee) {
       onViewEmployee(employee);
     } else {
-      console.log('View employee:', employee);
+      console.log('View foreign teacher:', employee);
     }
   };
 
@@ -57,7 +61,7 @@ export default function EmployeesTab({
   };
 
   const handleDeleteEmployee = async (employee: Employee) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${employee.full_name}"?`)) {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa giáo viên nước ngoài "${employee.full_name}"?`)) {
       try {
         const response = await fetch(`/api/employees/${employee.id}`, {
           method: 'DELETE',
@@ -67,14 +71,14 @@ export default function EmployeesTab({
 
         if (result.success) {
           // Refresh the employees list by calling the parent's form submit handler
-          await handleFormSubmit({ refresh: true }, 'RefreshEmployees');
-          alert('Xóa nhân viên thành công!');
+          await handleFormSubmit({ refresh: true }, 'RefreshForeignTeachers');
+          alert('Xóa giáo viên nước ngoài thành công!');
         } else {
-          alert(`Lỗi khi xóa nhân viên: ${result.message}`);
+          alert(`Lỗi khi xóa giáo viên nước ngoài: ${result.message}`);
         }
       } catch (error) {
-        console.error('Error deleting employee:', error);
-        alert('Có lỗi xảy ra khi xóa nhân viên');
+        console.error('Error deleting foreign teacher:', error);
+        alert('Có lỗi xảy ra khi xóa giáo viên nước ngoài');
       }
     }
   };
@@ -95,8 +99,8 @@ export default function EmployeesTab({
 
   return (
     <div className="space-y-6">
-      <EmployeesTabCrud
-        employees={vietnameseEmployees}
+      <ForeignTeachersCrudContainer
+        employees={foreignTeachers}
         isLoading={isLoadingEmployees}
         onSubmit={handleSubmit}
         onView={handleViewEmployee}
@@ -104,6 +108,8 @@ export default function EmployeesTab({
         onDelete={handleDeleteEmployee}
         onWorkSchedule={handleOpenWorkSchedule}
       />
+
+      {/* You can use vietnameseEmployees wherever needed for nhân viên */}
 
       {/* Work Schedule Modal */}
       <WorkScheduleModal

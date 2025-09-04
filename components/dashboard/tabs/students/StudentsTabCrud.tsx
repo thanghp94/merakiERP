@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { z } from 'zod';
-import { Student } from '../../shared/types';
+import { Student } from '@/components/dashboard/shared/types';
 import { formatDate, getStatusBadge } from '../../shared/utils';
 import {
   CrudTable,
