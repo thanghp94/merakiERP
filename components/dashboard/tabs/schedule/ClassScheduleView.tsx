@@ -12,7 +12,6 @@ import {
 const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({ classId }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [editingSession, setEditingSession] = useState<string | null>(null);
 
   // Use custom hooks for data management
   const {
@@ -44,15 +43,8 @@ const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({ classId }) => {
   }, []);
 
   // Session editing handlers
-  const handleEditSession = useCallback((sessionId: string) => {
-    setEditingSession(editingSession === sessionId ? null : sessionId);
-  }, [editingSession]);
-
   const handleUpdateSession = useCallback(async (sessionId: string, updates: any) => {
-    const success = await updateSession(sessionId, updates);
-    if (success) {
-      setEditingSession(null);
-    }
+    await updateSession(sessionId, updates);
   }, [updateSession]);
 
   // Generate date range text for header
@@ -86,10 +78,8 @@ const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({ classId }) => {
             viewMode={viewMode}
             currentDate={currentDate}
             startDate={startDate}
-            editingSession={editingSession}
             teachers={teachers}
             teachingAssistants={teachingAssistants}
-            onEditSession={handleEditSession}
             onUpdateSession={handleUpdateSession}
           />
         )}
