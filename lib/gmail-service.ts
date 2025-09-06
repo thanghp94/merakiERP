@@ -5,6 +5,13 @@ export interface EmailData {
   subject: string;
   body: string;
   from?: string;
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
 }
 
 export class GmailService {
@@ -46,22 +53,59 @@ export class GmailService {
   }
 
   /**
-   * Create email message in RFC 2822 format
+   * Create email message in RFC 2822 format with optional attachments
    */
   private createMessage(emailData: EmailData): string {
-    const { to, subject, body, from = 'khachhang@meraki.edu.vn' } = emailData;
+    const { to, subject, body, from = 'khachhang@meraki.edu.vn', attachments = [] } = emailData;
     
-    const message = [
+    if (attachments.length === 0) {
+      // Simple text email
+      const message = [
+        `From: ${from}`,
+        `To: ${to}`,
+        `Subject: ${subject}`,
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        body
+      ].join('\n');
+
+      return Buffer.from(message)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    }
+
+    // Email with attachments - use multipart
+    const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    let message = [
       `From: ${from}`,
       `To: ${to}`,
       `Subject: ${subject}`,
-      'Content-Type: text/plain; charset=utf-8',
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
       '',
-      body
-    ].join('\n');
+      `--${boundary}`,
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      body,
+      ''
+    ];
 
-    // Encode message in base64url format
-    return Buffer.from(message)
+    // Add attachments
+    attachments.forEach(attachment => {
+      message.push(`--${boundary}`);
+      message.push(`Content-Type: ${attachment.contentType}`);
+      message.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
+      message.push('Content-Transfer-Encoding: base64');
+      message.push('');
+      message.push(attachment.content.toString('base64'));
+      message.push('');
+    });
+
+    message.push(`--${boundary}--`);
+
+    return Buffer.from(message.join('\n'))
       .toString('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')

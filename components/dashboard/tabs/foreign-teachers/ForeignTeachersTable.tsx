@@ -55,32 +55,8 @@ export default function ForeignTeachersTable({
           </div>
         )
       },
-      {
-        key: 'department',
-        label: 'Phòng ban',
-        render: (value) => (
-          <div className="text-sm text-gray-900">
-            {value || '-'}
-          </div>
-        )
-      },
-      {
-        key: 'status',
-        label: 'Trạng thái',
-        render: (value) => {
-          const statusColors = {
-            active: 'bg-green-100 text-green-800',
-            inactive: 'bg-yellow-100 text-yellow-800',
-            terminated: 'bg-red-100 text-red-800'
-          };
 
-          return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[value as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}`}>
-              {EMPLOYEE_STATUSES[value as keyof typeof EMPLOYEE_STATUSES] || value}
-            </span>
-          );
-        }
-      }
+
     ];
   };
 

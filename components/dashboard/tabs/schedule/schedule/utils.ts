@@ -6,15 +6,15 @@ export const getSessionColor = (session: Session): string => {
   if (isGrapeSeed) {
     switch (session.subject_type) {
       case 'TSI':
-        return 'bg-blue-100 border-blue-300 text-blue-800';
+        return 'bg-blue-100 border-blue-500 text-blue-800';
       case 'REP':
-        return 'bg-green-100 border-green-300 text-green-800';
+        return 'bg-green-100 border-green-500 text-green-800';
       default:
-        return 'bg-purple-100 border-purple-300 text-purple-800';
+        return 'bg-purple-100 border-purple-500 text-purple-800';
     }
   }
   
-  return 'bg-gray-100 border-gray-300 text-gray-800';
+  return 'bg-gray-100 border-gray-500 text-gray-800';
 };
 
 export const formatTime = (time: string): string => {
@@ -101,9 +101,16 @@ export const getWeekDates = (startDate: string): string[] => {
   return weekDates;
 };
 
+export const formatDateToDDMMYYYY = (date: Date): string => {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 export const formatDateRange = (startDate: string, endDate: string): string => {
   const start = new Date(startDate);
   const end = new Date(endDate);
   
-  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  return `${formatDateToDDMMYYYY(start)} - ${formatDateToDDMMYYYY(end)}`;
 };

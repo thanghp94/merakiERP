@@ -10,7 +10,9 @@ interface ScheduleGridProps {
   startDate: string;
   teachers: Employee[];
   teachingAssistants: Employee[];
+  facilities: any[];
   onUpdateSession: (sessionId: string, updates: Partial<Session>) => void;
+  onExpandDay?: (date: string) => void;
 }
 
 const ScheduleGrid: React.FC<ScheduleGridProps> = ({
@@ -20,7 +22,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   startDate,
   teachers,
   teachingAssistants,
+  facilities,
   onUpdateSession,
+  onExpandDay,
 }) => {
   const [editingSession, setEditingSession] = useState<string | null>(null);
 
@@ -57,23 +61,21 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
           editingSession={editingSession}
           teachers={teachers}
           teachingAssistants={teachingAssistants}
+          facilities={facilities}
           onEditSession={onEditSession}
           onUpdateSession={handleUpdateSession}
+          onExpandDay={onExpandDay}
         />
       </div>
     );
   } else {
-    // Week view - show all 7 days with dynamic widths
+    // Week view - show all 7 days with individual time columns
     const weekDates = getWeekDates(startDate);
 
     return (
       <div className="flex">
         {weekDays.map((dayName, index) => {
-          // Check if this day has any sessions
           const dayDate = weekDates[index];
-          const hasSessions = sessions.some(session =>
-            session.start_time.split('T')[0] === dayDate
-          );
 
           return (
             <DayColumn
@@ -84,8 +86,10 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
               editingSession={editingSession}
               teachers={teachers}
               teachingAssistants={teachingAssistants}
+              facilities={facilities}
               onEditSession={onEditSession}
               onUpdateSession={handleUpdateSession}
+              onExpandDay={onExpandDay}
             />
           );
         })}

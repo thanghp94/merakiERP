@@ -8,6 +8,7 @@ interface SessionCardProps {
   isEditing: boolean;
   teachers: Employee[];
   teachingAssistants: Employee[];
+  facilities: any[];
   sessionWidth: string;
   sessionLeft: string;
   onEdit: (sessionId: string) => void;
@@ -19,6 +20,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
   isEditing,
   teachers,
   teachingAssistants,
+  facilities,
   sessionWidth,
   sessionLeft,
   onEdit,
@@ -26,25 +28,46 @@ const SessionCard: React.FC<SessionCardProps> = ({
 }) => {
   const startTime = formatTime(session.start_time.substring(11, 16));
   const endTime = formatTime(session.end_time.substring(11, 16));
+  
+  // Get teacher and TA names by looking up IDs in the provided arrays
+  const teacher = teachers.find(t => t.id === session.teacher_id) || 
+                 session.employees_teacher;
+  const teachingAssistant = teachingAssistants.find(ta => ta.id === session.teaching_assistant_id) || 
+                           session.employees_assistant;
+  
+  // Get facility/room name by looking up location_id
+  const facility = facilities.find(f => f.id === session.location_id);
+  
+  const teacherName = teacher?.full_name || session.data?.teacher_name || 'Teacher';
+  const taName = teachingAssistant?.full_name || session.data?.ta_name || session.data?.teaching_assistant_name;
+  const roomName = facility?.facility_name || facility?.name || session.data?.location || session.data?.room || session.data?.facility_name || 'Room';
+  const className = session.main_sessions?.classes?.class_name || session.data?.class_name || 'Class';
 
   return (
     <div
-      className={`absolute top-1 p-2 rounded text-xs cursor-pointer hover:shadow-md transition-shadow ${getSessionColor(session)}`}
+      className={`p-1 rounded cursor-pointer hover:shadow-md transition-shadow border-2 ${getSessionColor(session)}`}
       style={{
         width: sessionWidth,
         left: sessionLeft,
-        minHeight: '60px'
+        height: '100%',
+        fontSize: '10px'
       }}
       onClick={() => onEdit(session.id)}
     >
-      <div className="font-semibold">
-        {session.data?.subject_name || session.subject_type}
+      {/* Class name at the top */}
+      <div className="font-bold mb-1">
+        {className}
       </div>
-      <div className="text-xs">
-        {startTime} - {endTime}
+      
+      {/* Teacher name */}
+      <div className="mb-1">
+        {teacherName}
       </div>
-      <div className="text-xs">
-        {session.data?.teacher_name || 'Teacher'} {session.data?.location || 'Room'}
+      
+      
+      {/* Time */}
+      <div>
+        {startTime}-{endTime}
       </div>
       
       {/* Edit form */}
@@ -53,6 +76,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
           session={session}
           teachers={teachers}
           teachingAssistants={teachingAssistants}
+          facilities={facilities}
           onUpdate={onUpdate}
         />
       )}

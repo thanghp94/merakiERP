@@ -34,7 +34,7 @@ export const getMainTabs = (): MainTab[] => [
     label: 'HCNS',
     icon: '👤',
     subtabs: [
-      { id: 'employees', label: 'Nhân viên', icon: '👨‍💼', link: '/employee' },
+      { id: 'employee', label: 'Nhân viên', icon: '👨‍💼', link: '/employee' },
       { id: 'foreign-teachers', label: 'GVNN', icon: '👨‍🏫', link: '/foreign-teachers' },
       { id: 'requests', label: 'Yêu cầu', icon: '📋', link: '/requests' },
       { id: 'tasks', label: 'Bài tập', icon: '📝', link: '/tasks' },

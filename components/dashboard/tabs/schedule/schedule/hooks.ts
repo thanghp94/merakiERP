@@ -99,3 +99,55 @@ export const useEmployeeData = () => {
     refetchEmployees: fetchEmployees
   };
 };
+
+export const useFacilitiesData = () => {
+  const [facilities, setFacilities] = useState<any[]>([]);
+
+  const fetchFacilities = useCallback(async () => {
+    try {
+      const response = await fetch('/api/facilities');
+      const result = await response.json();
+      
+      if (result.success) {
+        setFacilities(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching facilities:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchFacilities();
+  }, [fetchFacilities]);
+
+  return {
+    facilities,
+    refetchFacilities: fetchFacilities
+  };
+};
+
+export const useClassesData = () => {
+  const [classes, setClasses] = useState<any[]>([]);
+
+  const fetchClasses = useCallback(async () => {
+    try {
+      const response = await fetch('/api/classes');
+      const result = await response.json();
+      
+      if (result.success) {
+        setClasses(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchClasses();
+  }, [fetchClasses]);
+
+  return {
+    classes,
+    refetchClasses: fetchClasses
+  };
+};

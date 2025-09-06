@@ -1,60 +1,52 @@
 import React from 'react';
-import { Session } from './types';
 
 interface TimeColumnProps {
-  sessions: Session[];
-  date: string;
+  earliestHour: number;
+  latestHour: number;
+  timeRangeStart: Date;
+  totalHeight: number;
   heightMultiplier: number;
+  date: string;
 }
 
-const TimeColumn: React.FC<TimeColumnProps> = ({ sessions, date, heightMultiplier }) => {
-  if (sessions.length === 0) {
-    return null;
-  }
-
-  // Find the actual earliest and latest times from sessions
-  let earliestHour = 23;
-  let latestHour = 0;
-  
-  sessions.forEach(session => {
-    const startTime = new Date(session.start_time);
-    const endTime = new Date(session.end_time);
-    
-    // Use UTC hours instead of local hours to match the displayed session times
-    const startHour = startTime.getUTCHours();
-    const endTimeHour = endTime.getUTCHours() + (endTime.getUTCMinutes() > 0 ? 1 : 0);
-    
-    if (startHour < earliestHour) earliestHour = startHour;
-    if (endTimeHour > latestHour) latestHour = endTimeHour;
-  });
-
-  // Generate hour labels
+const TimeColumn: React.FC<TimeColumnProps> = ({ 
+  earliestHour, 
+  latestHour, 
+  timeRangeStart, 
+  totalHeight, 
+  heightMultiplier, 
+  date 
+}) => {
+  // Generate hour labels - ensure we show all hours that contain or bound sessions
   const hours = [];
   for (let h = earliestHour; h <= latestHour; h++) {
     hours.push(h);
   }
 
-  const totalMinutes = (latestHour - earliestHour) * 60;
-  const totalHeight = totalMinutes * heightMultiplier;
-
   return (
     <div 
-      className="absolute left-[-4rem] top-0 w-16 flex flex-col items-end pr-1 text-xs text-gray-600" 
+      className="absolute left-[-2rem] top-0 w-8 flex flex-col items-end pr-1 text-xs text-gray-600" 
       style={{ height: `${totalHeight}px` }}
     >
-      {hours.map((hour, i) => {
-        // Position label proportionally within the time range
-        const topPosition = (i * 60) * heightMultiplier;
+      {hours.map((hour) => {
+        // Position each hour label at the exact start of that hour (matching session timezone)
+        const hourTime = new Date(timeRangeStart);
+        hourTime.setHours(hour, 0, 0, 0);
+        const hourPosition = (hourTime.getTime() - timeRangeStart.getTime()) / (1000 * 60) * heightMultiplier;
+        
+        // The hour is already in local time from the session data processing
+        const displayHour = hour;
+        
         return (
           <div 
             key={hour} 
             style={{ 
               position: 'absolute', 
-              top: `${topPosition}px`, 
+              top: `${hourPosition}px`, 
               transform: 'translateY(-50%)'
             }}
           >
-            {hour.toString().padStart(2, '0')}:00
+            {displayHour.toString().padStart(2, '0')}:00
           </div>
         );
       })}
