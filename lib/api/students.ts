@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabase';
-import type { Student } from '@/lib/supabase';
+import { FirebaseAdmin, COLLECTIONS } from '@/lib/firebase-admin';
+import type { Student } from '@/lib/firebase';
 
 export interface CreateStudentData {
   full_name: string;
@@ -29,17 +29,13 @@ export interface UpdateStudentData extends Partial<CreateStudentData> {
 
 // Create a new student
 export async function createStudent(studentData: CreateStudentData) {
-  const { data, error } = await supabase
-    .from('students')
-    .insert({
-      ...studentData,
-      status: 'active'
-    })
-    .select()
-    .single();
+  const result = await FirebaseAdmin.createDocument(COLLECTIONS.STUDENTS, {
+    ...studentData,
+    status: 'active'
+  });
 
-  if (error) throw error;
-  return data;
+  if (!result.success) throw new Error(result.error);
+  return result.data;
 }
 
 // Get all students with optional filters
@@ -50,98 +46,106 @@ export async function getStudents(filters?: {
   limit?: number;
   offset?: number;
 }) {
-  let query = supabase
-    .from('students')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const firestoreFilters: any = {
+    orderBy: { field: 'created_at', direction: 'desc' }
+  };
+
+  const whereConditions: any[] = [];
 
   if (filters?.status) {
-    query = query.eq('status', filters.status);
+    whereConditions.push(['status', '==', filters.status]);
   }
 
   if (filters?.level) {
-    query = query.eq('data->level', filters.level);
+    whereConditions.push(['data.level', '==', filters.level]);
   }
 
-  if (filters?.search) {
-    query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+  if (whereConditions.length > 0) {
+    firestoreFilters.where = whereConditions;
   }
 
   if (filters?.limit) {
-    query = query.limit(filters.limit);
+    firestoreFilters.limit = filters.limit;
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+    firestoreFilters.offset = filters.offset;
   }
 
-  const { data, error } = await query;
+  const result = await FirebaseAdmin.getCollection(COLLECTIONS.STUDENTS, firestoreFilters);
 
-  if (error) throw error;
+  if (!result.success) throw new Error(result.error);
+
+  let data = result.data || [];
+
+  // Apply search filter client-side since Firestore doesn't support LIKE queries
+  if (filters?.search) {
+    const searchTerm = filters.search.toLowerCase();
+    data = data.filter((student: any) => 
+      student.full_name?.toLowerCase().includes(searchTerm) ||
+      student.email?.toLowerCase().includes(searchTerm)
+    );
+  }
+
   return data;
 }
 
 // Get a single student by ID
 export async function getStudentById(id: string) {
-  const { data, error } = await supabase
-    .from('students')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const result = await FirebaseAdmin.getDocument(COLLECTIONS.STUDENTS, id);
 
-  if (error) throw error;
-  return data;
+  if (!result.success) throw new Error(result.error);
+  return result.data;
 }
 
 // Update a student
 export async function updateStudent(id: string, updates: UpdateStudentData) {
-  const { data, error } = await supabase
-    .from('students')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  const result = await FirebaseAdmin.updateDocument(COLLECTIONS.STUDENTS, id, updates);
 
-  if (error) throw error;
-  return data;
+  if (!result.success) throw new Error(result.error);
+  
+  // Get the updated document
+  const updatedDoc = await FirebaseAdmin.getDocument(COLLECTIONS.STUDENTS, id);
+  if (!updatedDoc.success) throw new Error(updatedDoc.error);
+  
+  return updatedDoc.data;
 }
 
 // Delete a student (soft delete by setting status to inactive)
 export async function deleteStudent(id: string) {
-  const { data, error } = await supabase
-    .from('students')
-    .update({ status: 'inactive' })
-    .eq('id', id)
-    .select()
-    .single();
+  const result = await FirebaseAdmin.updateDocument(COLLECTIONS.STUDENTS, id, { status: 'inactive' });
 
-  if (error) throw error;
-  return data;
+  if (!result.success) throw new Error(result.error);
+  
+  // Get the updated document
+  const updatedDoc = await FirebaseAdmin.getDocument(COLLECTIONS.STUDENTS, id);
+  if (!updatedDoc.success) throw new Error(updatedDoc.error);
+  
+  return updatedDoc.data;
 }
 
 // Get student statistics
 export async function getStudentStats() {
-  const { data: totalStudents, error: totalError } = await supabase
-    .from('students')
-    .select('id', { count: 'exact' });
+  // Get total students
+  const totalResult = await FirebaseAdmin.getCollection(COLLECTIONS.STUDENTS, {});
+  if (!totalResult.success) throw new Error(totalResult.error);
 
-  const { data: activeStudents, error: activeError } = await supabase
-    .from('students')
-    .select('id', { count: 'exact' })
-    .eq('status', 'active');
+  // Get active students
+  const activeResult = await FirebaseAdmin.getCollection(COLLECTIONS.STUDENTS, {
+    where: [['status', '==', 'active']]
+  });
+  if (!activeResult.success) throw new Error(activeResult.error);
 
-  const { data: todayEnrollments, error: todayError } = await supabase
-    .from('students')
-    .select('id', { count: 'exact' })
-    .gte('created_at', new Date().toISOString().split('T')[0]);
-
-  if (totalError || activeError || todayError) {
-    throw totalError || activeError || todayError;
-  }
+  // Get today's enrollments
+  const today = new Date().toISOString().split('T')[0];
+  const todayResult = await FirebaseAdmin.getCollection(COLLECTIONS.STUDENTS, {
+    where: [['created_at', '>=', today]]
+  });
+  if (!todayResult.success) throw new Error(todayResult.error);
 
   return {
-    total: totalStudents?.length || 0,
-    active: activeStudents?.length || 0,
-    todayEnrollments: todayEnrollments?.length || 0
+    total: totalResult.data?.length || 0,
+    active: activeResult.data?.length || 0,
+    todayEnrollments: todayResult.data?.length || 0
   };
 }

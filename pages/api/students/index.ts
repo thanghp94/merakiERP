@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '@/lib/supabase';
+import { FirebaseAdmin, COLLECTIONS } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -39,142 +39,137 @@ async function getStudents(req: NextApiRequest, res: NextApiResponse) {
     offset = 0
   } = req.query;
 
-  // If filtering by facility, class, or program_type, we need to join with enrollments and classes
-  const needsJoin = facility_id || class_id || program_type;
+  try {
+    // Build filters for Firestore query
+    const filters: any = {
+      orderBy: { field: 'created_at', direction: 'desc' },
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string)
+    };
 
-  let query;
+    const whereConditions: any[] = [];
 
-  if (needsJoin) {
-    // Query with joins to get students filtered by facility/class/program
-    query = supabase
-      .from('students')
-      .select(`
-        *,
-        enrollments!inner (
-          id,
-          class_id,
-          status,
-          classes!inner (
-            id,
-            class_name,
-            facility_id,
-            data,
-            facilities (
-              id,
-              name
-            )
-          )
-        ),
-        invoices:invoices!left (
-          id,
-          amount,
-          outstanding_amount,
-          payment_status,
-          due_date,
-          created_at,
-          class_id,
-          student_id
-        )
-      `)
-      .eq('enrollments.status', 'active')
-      .order('created_at', { ascending: false });
-
-    // Apply facility filter
-    if (facility_id && facility_id !== 'all') {
-      query = query.eq('enrollments.classes.facility_id', facility_id);
+    // Apply status filter
+    if (status) {
+      whereConditions.push(['status', '==', status]);
     }
 
-    // Apply class filter
-    if (class_id && class_id !== 'all') {
-      query = query.eq('enrollments.class_id', class_id);
-      query = query.eq('invoices.class_id', class_id);
+    // Apply level filter
+    if (level && level !== 'all') {
+      whereConditions.push(['data.level', '==', level]);
     }
 
-    // Apply program_type filter
-    if (program_type && program_type !== 'all') {
-      query = query.eq('enrollments.classes.data->>program_type', program_type);
+    if (whereConditions.length > 0) {
+      filters.where = whereConditions;
     }
 
-    // Remove payment_status filter on invoices to include all invoices including drafts
-    // if (payment_status && payment_status !== 'all') {
-    //   query = query.eq('enrollments.invoices.payment_status', payment_status);
-    // }
+    // Get students from Firestore
+    const result = await FirebaseAdmin.getCollection(COLLECTIONS.STUDENTS, filters);
 
-    // Remove due date filters on invoices to include all invoices
-    // if (due_month && due_year) {
-    //   query = query.gte('enrollments.invoices.due_date', `${due_year}-${due_month}-01`)
-    //                .lte('enrollments.invoices.due_date', `${due_year}-${due_month}-31`);
-    // }
-  } else {
-    // Simple query without joins
-    query = supabase
-      .from('students')
-      .select('*')
-      .order('created_at', { ascending: false });
-  }
+    if (!result.success) {
+      console.error('Firebase error:', result.error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Không thể lấy danh sách học sinh' 
+      });
+    }
 
-  // Apply common filters
-  if (status) {
-    query = query.eq('status', status);
-  }
+    let processedData = result.data || [];
 
-  if (level && level !== 'all') {
-    query = query.eq('data->>level', level);
-  }
+    // Apply search filter (client-side since Firestore doesn't support LIKE queries)
+    if (search) {
+      const searchTerm = (search as string).toLowerCase();
+      processedData = processedData.filter((student: any) => 
+        student.full_name?.toLowerCase().includes(searchTerm) ||
+        student.email?.toLowerCase().includes(searchTerm)
+      );
+    }
 
-  if (search) {
-    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
-  }
+    // If we need to join with enrollments/classes, fetch them separately
+    const needsJoin = facility_id || class_id || program_type;
+    
+    if (needsJoin) {
+      // For each student, get their enrollments and filter based on criteria
+      const studentsWithEnrollments = await Promise.all(
+        processedData.map(async (student: any) => {
+          try {
+            // Get enrollments for this student
+            const enrollmentFilters = {
+              where: [
+                ['student_id', '==', student.id],
+                ['status', '==', 'active']
+              ]
+            };
 
-  if (limit) {
-    query = query.limit(parseInt(limit as string));
-  }
+            const enrollmentResult = await FirebaseAdmin.getCollection(COLLECTIONS.ENROLLMENTS, enrollmentFilters);
+            const enrollments = enrollmentResult.success ? enrollmentResult.data : [];
 
-  if (offset) {
-    query = query.range(
-      parseInt(offset as string), 
-      parseInt(offset as string) + parseInt(limit as string) - 1
-    );
-  }
+            // Get class details for each enrollment
+            const enrichedEnrollments = await Promise.all(
+              enrollments.map(async (enrollment: any) => {
+                const classResult = await FirebaseAdmin.getDocument(COLLECTIONS.CLASSES, enrollment.class_id);
+                if (classResult.success) {
+                  const classData = classResult.data;
+                  
+                  // Apply filters
+                  if (facility_id && facility_id !== 'all' && classData.facility_id !== facility_id) {
+                    return null;
+                  }
+                  if (class_id && class_id !== 'all' && classData.id !== class_id) {
+                    return null;
+                  }
+                  if (program_type && program_type !== 'all' && classData.data?.program_type !== program_type) {
+                    return null;
+                  }
 
-  const { data, error } = await query;
+                  // Get facility details
+                  const facilityResult = await FirebaseAdmin.getDocument(COLLECTIONS.FACILITIES, classData.facility_id);
+                  const facilityData = facilityResult.success ? facilityResult.data : null;
 
-  if (error) {
-    console.error('Supabase error:', error);
+                  return {
+                    ...enrollment,
+                    classes: {
+                      ...classData,
+                      facilities: facilityData
+                    }
+                  };
+                }
+                return null;
+              })
+            );
+
+            const validEnrollments = enrichedEnrollments.filter(e => e !== null);
+
+            if (validEnrollments.length > 0) {
+              return {
+                ...student,
+                current_enrollments: validEnrollments,
+                enrollments: validEnrollments
+              };
+            }
+            return null;
+          } catch (error) {
+            console.error('Error processing student enrollments:', error);
+            return null;
+          }
+        })
+      );
+
+      processedData = studentsWithEnrollments.filter(s => s !== null);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: processedData,
+      message: 'Lấy danh sách học sinh thành công'
+    });
+  } catch (error) {
+    console.error('Error fetching students:', error);
     return res.status(500).json({ 
       success: false, 
       message: 'Không thể lấy danh sách học sinh' 
     });
   }
-
-  // If we used joins, we need to flatten the data and remove duplicates
-  let processedData = data;
-  if (needsJoin && data) {
-    // Remove duplicate students (a student might be in multiple classes)
-    const uniqueStudents = new Map();
-    
-    data.forEach((student: any) => {
-      if (!uniqueStudents.has(student.id)) {
-        // Add enrollment and class info to student data
-        const studentWithEnrollment = {
-          ...student,
-          current_enrollments: student.enrollments || []
-        };
-        // Keep enrollments as well for backward compatibility or other uses
-        // Do not delete enrollments here
-        uniqueStudents.set(student.id, studentWithEnrollment);
-      }
-    });
-    
-    processedData = Array.from(uniqueStudents.values());
-  }
-
-
-  return res.status(200).json({
-    success: true,
-    data: processedData,
-    message: 'Lấy danh sách học sinh thành công'
-  });
 }
 
 async function createStudent(req: NextApiRequest, res: NextApiResponse) {
@@ -187,29 +182,33 @@ async function createStudent(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const { data: student, error } = await supabase
-    .from('students')
-    .insert({
+  try {
+    const result = await FirebaseAdmin.createDocument(COLLECTIONS.STUDENTS, {
       full_name,
       email,
       phone,
       status,
       data
-    })
-    .select()
-    .single();
+    });
 
-  if (error) {
-    console.error('Supabase error:', error);
+    if (!result.success) {
+      console.error('Firebase error:', result.error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Không thể tạo học sinh mới' 
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: result.data,
+      message: 'Tạo học sinh mới thành công'
+    });
+  } catch (error) {
+    console.error('Error creating student:', error);
     return res.status(500).json({ 
       success: false, 
       message: 'Không thể tạo học sinh mới' 
     });
   }
-
-  return res.status(201).json({
-    success: true,
-    data: student,
-    message: 'Tạo học sinh mới thành công'
-  });
 }

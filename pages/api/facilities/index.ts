@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '@/lib/supabase';
+import { FirebaseAdmin, COLLECTIONS } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -27,41 +27,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getFacilities(req: NextApiRequest, res: NextApiResponse) {
   const { status, limit = 50, offset = 0 } = req.query;
 
-  let query = supabase
-    .from('facilities')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    const filters: any = {
+      orderBy: { field: 'created_at', direction: 'desc' },
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string)
+    };
 
-  if (status) {
-    query = query.eq('status', status);
-  }
+    const whereConditions: any[] = [];
 
-  if (limit) {
-    query = query.limit(parseInt(limit as string));
-  }
+    if (status) {
+      whereConditions.push(['status', '==', status]);
+    }
 
-  if (offset) {
-    query = query.range(
-      parseInt(offset as string), 
-      parseInt(offset as string) + parseInt(limit as string) - 1
-    );
-  }
+    if (whereConditions.length > 0) {
+      filters.where = whereConditions;
+    }
 
-  const { data, error } = await query;
+    const result = await FirebaseAdmin.getCollection(COLLECTIONS.FACILITIES, filters);
 
-  if (error) {
-    console.error('Supabase error:', error);
+    if (!result.success) {
+      console.error('Firebase error:', result.error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Không thể lấy danh sách cơ sở' 
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: result.data || [],
+      message: 'Lấy danh sách cơ sở thành công'
+    });
+  } catch (error) {
+    console.error('Error fetching facilities:', error);
     return res.status(500).json({ 
       success: false, 
       message: 'Không thể lấy danh sách cơ sở' 
     });
   }
-
-  return res.status(200).json({
-    success: true,
-    data,
-    message: 'Lấy danh sách cơ sở thành công'
-  });
 }
 
 async function createFacility(req: NextApiRequest, res: NextApiResponse) {
@@ -74,27 +78,31 @@ async function createFacility(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const { data: facility, error } = await supabase
-    .from('facilities')
-    .insert({
+  try {
+    const result = await FirebaseAdmin.createDocument(COLLECTIONS.FACILITIES, {
       name,
       status,
       data
-    })
-    .select()
-    .single();
+    });
 
-  if (error) {
-    console.error('Supabase error:', error);
+    if (!result.success) {
+      console.error('Firebase error:', result.error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Không thể tạo cơ sở mới' 
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: result.data,
+      message: 'Tạo cơ sở mới thành công'
+    });
+  } catch (error) {
+    console.error('Error creating facility:', error);
     return res.status(500).json({ 
       success: false, 
       message: 'Không thể tạo cơ sở mới' 
     });
   }
-
-  return res.status(201).json({
-    success: true,
-    data: facility,
-    message: 'Tạo cơ sở mới thành công'
-  });
 }
