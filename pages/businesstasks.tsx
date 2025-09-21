@@ -246,3 +246,24 @@ export default function BusinessTasksPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(taskInstanceData),
+      });
+
+      if (response.ok) {
+        console.log('Task instance created successfully');
+        // Handle success
+      } else {
+        console.error('Failed to create task instance');
+      }
+    } catch (error) {
+      console.error('Error creating task instance:', error);
+    }
+  };
+
+  return (
+    <div>
+      <h1>Business Tasks</h1>
+      <p>Business tasks management page</p>
+    </div>
+  );
+};

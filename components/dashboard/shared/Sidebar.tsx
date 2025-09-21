@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
-import { ROLES } from '@/auth/rbac';
+import { ROLES, getRoleDisplayName } from '@/auth/roles';
 import { MainTab, MainTabType, TabType } from '@/shared/types';
 import { Button } from '@/components/ui';
 import { handleSubTabNavigation } from '@/components/navigation/NavigationConfig';
@@ -37,21 +37,6 @@ export default function Sidebar({
     router.push('/student');
     if (isMobileMenuOpen) {
       onMobileMenuClose();
-    }
-  };
-
-  const getRoleDisplayName = (role: string) => {
-    switch (role) {
-      case ROLES.ADMIN:
-        return 'Quản trị viên';
-      case ROLES.TEACHER:
-        return 'Giáo viên';
-      case ROLES.TA:
-        return 'Trợ giảng';
-      case ROLES.STUDENT:
-        return 'Học sinh';
-      default:
-        return 'Người dùng';
     }
   };
 

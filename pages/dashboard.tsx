@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { ROLES } from '@/auth/rbac';
+import { ROLES } from '@/auth/roles';
 import { TabType, MainTabType, MainTab, SubTab, ApiTestResult, Class, Facility, ProgramType, UnitOption, Employee, Student, Enrollment, Attendance, Finance, Task, Admission } from '@/shared/types';
 import { tabs, getNextSuggestedUnit } from '@/shared/utils';
 import { Button, Card, Badge } from '@/components/ui';

@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/auth/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { ROLES } from '@/auth/rbac';
+import { ROLES } from '@/auth/roles';
 import { TabType, MainTabType, MainTab, ApiTestResult, Employee } from '@/shared/types';
 import { Button, Card } from '@/components/ui';
 import Sidebar from '@/dashboard/shared/Sidebar';

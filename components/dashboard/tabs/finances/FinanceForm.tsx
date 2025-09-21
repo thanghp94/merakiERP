@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 
 interface FinanceFormProps {
   onSubmit: (financeData: any) => void;
+  onCancel: () => void;
   initialData?: any;
   isEditing?: boolean;
 }
 
 const FinanceForm: React.FC<FinanceFormProps> = ({
   onSubmit,
+  onCancel,
   initialData = {},
   isEditing = false
 }) => {
@@ -234,3 +236,32 @@ const FinanceForm: React.FC<FinanceFormProps> = ({
                 {referenceTypes.map(type => (
                   <option key={type.value} value={type.value}>
                     {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            Hủy
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {isEditing ? 'Cập nhật' : 'Thêm giao dịch'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default FinanceForm;
