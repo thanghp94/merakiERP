@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MerakiERP Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+        import { getFirestore, collection, getDocs, connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+        const firebaseConfig = {
+            projectId: 'merakierp',
+            apiKey: 'demo-key',
+            authDomain: 'merakierp.firebaseapp.com',
+            storageBucket: 'merakierp.appspot.com',
+            messagingSenderId: '43864479507',
+            appId: '1:43864479507:web:1e49c99267ade2c37d6ce6'
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Connect to emulator
+        try {
+            connectFirestoreEmulator(db, 'localhost', 8088);
+            console.log('✅ Connected to Firestore emulator');
+        } catch (error) {
+            console.log('⚠️ Emulator might already be connected:', error.message);
+        }
+
+        async function loadDashboardData() {
+            try {
+                console.log('📊 Loading dashboard data...');
+                
+                // Load students
+                const studentsSnapshot = await getDocs(collection(db, 'students'));
+                const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                document.getElementById('totalStudents').textContent = students.length;
+                
+                // Load active students
+                const activeStudents = students.filter(s => s.status === 'active');
+                document.getElementById('activeStudents').textContent = activeStudents.length;
+                
+                // Load classes
+                const classesSnapshot = await getDocs(collection(db, 'classes'));
+                const classes = classesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                document.getElementById('totalClasses').textContent = classes.length;
+                
+                // Load active classes
+                const activeClasses = classes.filter(c => c.status === 'active');
+                document.getElementById('activeClasses').textContent = activeClasses.length;
+                
+                // Load employees
+                const employeesSnapshot = await getDocs(collection(db, 'employees'));
+                const employees = employeesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                document.getElementById('totalEmployees').textContent = employees.length;
+                
+                // Load facilities
+                const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
+                const facilities = facilitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                document.getElementById('totalFacilities').textContent = facilities.length;
+                
+                // Load enrollments
+                const enrollmentsSnapshot = await getDocs(collection(db, 'enrollments'));
+                const enrollments = enrollmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                document.getElementById('totalEnrollments').textContent = enrollments.length;
+                
+                // Load finances
+                const financesSnapshot = await getDocs(collection(db, 'finances'));
+                const finances = financesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const totalRevenue = finances.reduce((sum, f) => sum + (f.amount || 0), 0);
+                document.getElementById('totalRevenue').textContent = new Intl.NumberFormat('vi-VN', { 
+                    style: 'currency', 
+                    currency: 'VND' 
+                }).format(totalRevenue);
+                
+                // Update recent students list
+                const recentStudentsList = document.getElementById('recentStudents');
+                recentStudentsList.innerHTML = '';
+                students.slice(0, 5).forEach(student => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center py-2 border-b border-gray-100';
+                    li.innerHTML = `
+                        <div>
+                            <div class="font-medium text-gray-900">${student.full_name}</div>
+                            <div class="text-sm text-gray-500">${student.email || 'No email'}</div>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${
+                            student.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }">${student.status}</span>
+                    `;
+                    recentStudentsList.appendChild(li);
+                });
+                
+                // Update recent classes list
+                const recentClassesList = document.getElementById('recentClasses');
+                recentClassesList.innerHTML = '';
+                classes.slice(0, 5).forEach(cls => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center py-2 border-b border-gray-100';
+                    li.innerHTML = `
+                        <div>
+                            <div class="font-medium text-gray-900">${cls.class_name}</div>
+                            <div class="text-sm text-gray-500">Level: ${cls.data?.level || 'Not specified'}</div>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${
+                            cls.status === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                        }">${cls.status}</span>
+                    `;
+                    recentClassesList.appendChild(li);
+                });
+                
+                console.log('✅ Dashboard data loaded successfully');
+                
+            } catch (error) {
+                console.error('❌ Error loading dashboard data:', error);
+                document.getElementById('errorMessage').textContent = `Error: ${error.message}`;
+                document.getElementById('errorMessage').classList.remove('hidden');
+            }
+        }
+
+        // Make function available globally
+        window.loadDashboardData = loadDashboardData;
+        
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+    </script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-xl font-semibold text-gray-900">MerakiERP Dashboard</h1>
+                        <span class="ml-3 px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Emulator Mode</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="http://127.0.0.1:4020" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">Firebase Emulator UI</a>
+                        <button onclick="loadDashboardData()" class="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Refresh</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Error Message -->
+            <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6"></div>
+            
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Total Students -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
+                                <span class="text-blue-600 font-semibold">👥</span>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-500">Total Students</div>
+                            <div class="text-2xl font-bold text-gray-900" id="totalStudents">-</div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-sm text-gray-500">Active: </span>
+                        <span class="text-sm font-medium text-green-600" id="activeStudents">-</span>
+                    </div>
+                </div>
+
+                <!-- Total Classes -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
+                                <span class="text-green-600 font-semibold">📚</span>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-500">Total Classes</div>
+                            <div class="text-2xl font-bold text-gray-900" id="totalClasses">-</div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-sm text-gray-500">Active: </span>
+                        <span class="text-sm font-medium text-green-600" id="activeClasses">-</span>
+                    </div>
+                </div>
+
+                <!-- Total Employees -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
+                                <span class="text-purple-600 font-semibold">👨‍🏫</span>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-500">Employees</div>
+                            <div class="text-2xl font-bold text-gray-900" id="totalEmployees">-</div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-sm text-gray-500">Facilities: </span>
+                        <span class="text-sm font-medium text-blue-600" id="totalFacilities">-</span>
+                    </div>
+                </div>
+
+                <!-- Revenue -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center">
+                                <span class="text-yellow-600 font-semibold">💰</span>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-500">Total Revenue</div>
+                            <div class="text-lg font-bold text-gray-900" id="totalRevenue">-</div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-sm text-gray-500">Enrollments: </span>
+                        <span class="text-sm font-medium text-green-600" id="totalEnrollments">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Data -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Recent Students -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Recent Students</h3>
+                    </div>
+                    <div class="p-6">
+                        <ul id="recentStudents" class="space-y-2">
+                            <li class="text-center text-gray-500 py-4">Loading students...</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Recent Classes -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Recent Classes</h3>
+                    </div>
+                    <div class="p-6">
+                        <ul id="recentClasses" class="space-y-2">
+                            <li class="text-center text-gray-500 py-4">Loading classes...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="mt-8 bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <a href="firebase-emulator-data-creator.html" class="block p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all">
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-3">🌱</span>
+                            <div>
+                                <div class="font-medium text-gray-900">Create Sample Data</div>
+                                <div class="text-sm text-gray-500">Populate emulator with test data</div>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="http://127.0.0.1:4020/firestore" target="_blank" class="block p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all">
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-3">🗄️</span>
+                            <div>
+                                <div class="font-medium text-gray-900">View Firestore Data</div>
+                                <div class="text-sm text-gray-500">Browse collections in emulator</div>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="http://127.0.0.1:4020" target="_blank" class="block p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all">
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-3">🔧</span>
+                            <div>
+                                <div class="font-medium text-gray-900">Emulator Dashboard</div>
+                                <div class="text-sm text-gray-500">Full Firebase emulator interface</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

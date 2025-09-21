@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -36,46 +35,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getTask(id: string, res: NextApiResponse) {
-  const { data, error } = await supabase
-    .from('tasks')
-    .select(`
-      *,
-      classes (
-        id,
-        class_name,
-        status,
-        facilities (
-          id,
-          name
-        )
-      ),
-      employees (
-        id,
-        full_name,
-        position,
-        department
-      )
-    `)
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy bài tập' 
-      });
+  // Mock task data with related entities
+  const mockTask = {
+    id: id,
+    title: 'Bài tập về nhà Unit 1',
+    description: 'Hoàn thành bài tập trong sách giáo khoa trang 10-15',
+    class_id: 'class-1',
+    assigned_by: 'teacher-1',
+    due_date: '2024-01-15',
+    task_type: 'homework',
+    status: 'active',
+    data: { pages: '10-15', difficulty: 'medium' },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    classes: {
+      id: 'class-1',
+      class_name: 'English Basic A1',
+      status: 'active',
+      facilities: {
+        id: 'facility-1',
+        name: 'Trung tâm Quận 1'
+      }
+    },
+    employees: {
+      id: 'teacher-1',
+      full_name: 'Nguyễn Văn An',
+      position: 'teacher',
+      department: 'education'
     }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy thông tin bài tập' 
-    });
-  }
+  };
 
   return res.status(200).json({
     success: true,
-    data,
+    data: mockTask,
     message: 'Lấy thông tin bài tập thành công'
   });
 }
@@ -100,65 +92,45 @@ async function updateTask(id: string, req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  const { data: task, error } = await supabase
-    .from('tasks')
-    .update(updateData)
-    .eq('id', id)
-    .select(`
-      *,
-      classes (
-        id,
-        class_name,
-        status,
-        facilities (
-          id,
-          name
-        )
-      ),
-      employees (
-        id,
-        full_name,
-        position,
-        department
-      )
-    `)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy bài tập' 
-      });
+  // Mock updated task with related entities
+  const updatedTask = {
+    id: id,
+    title: updateData.title || 'Bài tập về nhà Unit 1',
+    description: updateData.description || 'Hoàn thành bài tập trong sách giáo khoa trang 10-15',
+    class_id: updateData.class_id || 'class-1',
+    assigned_by: updateData.assigned_by || 'teacher-1',
+    due_date: updateData.due_date || '2024-01-15',
+    task_type: updateData.task_type || 'homework',
+    status: updateData.status || 'active',
+    data: updateData.data || { pages: '10-15', difficulty: 'medium' },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: new Date().toISOString(),
+    classes: {
+      id: updateData.class_id || 'class-1',
+      class_name: 'English Basic A1',
+      status: 'active',
+      facilities: {
+        id: 'facility-1',
+        name: 'Trung tâm Quận 1'
+      }
+    },
+    employees: {
+      id: updateData.assigned_by || 'teacher-1',
+      full_name: 'Nguyễn Văn An',
+      position: 'teacher',
+      department: 'education'
     }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể cập nhật bài tập' 
-    });
-  }
+  };
 
   return res.status(200).json({
     success: true,
-    data: task,
+    data: updatedTask,
     message: 'Cập nhật bài tập thành công'
   });
 }
 
 async function deleteTask(id: string, res: NextApiResponse) {
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể xóa bài tập' 
-    });
-  }
-
+  // Mock task deletion - always successful
   return res.status(200).json({
     success: true,
     message: 'Xóa bài tập thành công'

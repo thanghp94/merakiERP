@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
+import { 
+  signInWithEmailAndPassword, 
+  signOut as firebaseSignOut, 
+  onAuthStateChanged, 
+  User as FirebaseUser,
+  IdTokenResult
+} from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface User {
   id: string;
@@ -34,52 +40,89 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for token in cookies
-    const token = getCookie('token');
-    if (token) {
-      try {
-        const decoded: any = jwtDecode(token);
-        setUser({
-          id: decoded.id,
-          email: decoded.email,
-          role: decoded.role,
-        });
-      } catch (err) {
-        console.error('Invalid token:', err);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        try {
+          // Get the ID token with custom claims (roles)
+          const tokenResult: IdTokenResult = await firebaseUser.getIdTokenResult();
+          const role = tokenResult.claims.role || 'student'; // Default role
+          
+          setUser({
+            id: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            role: role as string,
+          });
+        } catch (error) {
+          console.error('Error getting user token:', error);
+          setUser(null);
+        }
+      } else {
         setUser(null);
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
-      const { token } = response.data;
-      if (token) {
-        document.cookie = `token=${token}; path=/; max-age=3600; secure; samesite=strict;`;
-        const decoded: any = jwtDecode(token);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      if (firebaseUser) {
+        // Get the ID token with custom claims
+        const tokenResult = await firebaseUser.getIdTokenResult();
+        const role = tokenResult.claims.role || 'student';
+        
         setUser({
-          id: decoded.id,
-          email: decoded.email,
-          role: decoded.role,
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          role: role as string,
         });
         setLoading(false);
         return { error: null };
       } else {
         setLoading(false);
-        return { error: 'No token received' };
+        return { error: 'No user returned from authentication' };
       }
     } catch (error: any) {
       setLoading(false);
-      return { error: error.response?.data?.error || 'Login failed' };
+      let errorMessage = 'Login failed';
+      
+      // Handle specific Firebase auth errors
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'User not found';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'Account has been disabled';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later';
+          break;
+        default:
+          errorMessage = error.message || 'Login failed';
+      }
+      
+      return { error: errorMessage };
     }
   };
 
-  const signOut = () => {
-    document.cookie = 'token=; path=/; max-age=0';
-    setUser(null);
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+      setUser(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const value: AuthContextType = {
@@ -91,10 +134,3 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-// Helper function to get cookie by name
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  if (match) return match[2];
-  return null;
-}

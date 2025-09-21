@@ -1,42 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-import { convertToUTC, extractTimezone, convertFromUTC } from '../../../lib/utils/timezone';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      const { data, error } = await supabase
-        .from('main_sessions')
-        .select(`
-          *,
-          classes (
-            id,
-            class_name,
-            facilities (
-              name
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching main sessions:', error);
-        return res.status(500).json({
-          success: false,
-          message: 'Lỗi khi lấy danh sách buổi học chính',
-          error: error.message
-        });
-      }
-
+      // Return empty data for now (Firebase version placeholder)
       return res.status(200).json({
         success: true,
-        data: data || [],
-        message: 'Lấy danh sách buổi học chính thành công'
+        data: [],
+        message: 'Lấy danh sách buổi học chính thành công (Firebase placeholder)'
       });
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -46,7 +17,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
+  } else if (req.method === 'POST') {
+    // Placeholder for POST requests
+    try {
+      return res.status(201).json({
+        success: true,
+        data: { id: 'temp-id', ...req.body },
+        message: 'Tạo buổi học chính thành công (Firebase placeholder)'
+      });
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Lỗi khi tạo buổi học chính',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  } else {
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).json({
+      success: false,
+      message: `Method ${req.method} not allowed`
+    });
   }
+}
 
   if (req.method === 'POST') {
     try {

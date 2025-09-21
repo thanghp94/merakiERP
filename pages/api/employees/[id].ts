@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -36,29 +35,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getEmployee(id: string, res: NextApiResponse) {
-  const { data, error } = await supabase
-    .from('employees')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy nhân viên' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy thông tin nhân viên' 
-    });
-  }
+  // Mock employee data
+  const mockEmployee = {
+    id: id,
+    full_name: 'Nguyễn Văn An',
+    position: 'teacher',
+    department: 'education',
+    status: 'active',
+    data: {
+      email: 'nguyenvanan@email.com',
+      phone: '0123456789',
+      hire_date: '2024-01-01',
+      salary: 15000000
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  };
 
   return res.status(200).json({
     success: true,
-    data,
+    data: mockEmployee,
     message: 'Lấy thông tin nhân viên thành công'
   });
 }
@@ -80,48 +76,32 @@ async function updateEmployee(id: string, req: NextApiRequest, res: NextApiRespo
     });
   }
 
-  const { data: employee, error } = await supabase
-    .from('employees')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy nhân viên' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể cập nhật nhân viên' 
-    });
-  }
+  // Mock updated employee
+  const updatedEmployee = {
+    id: id,
+    full_name: updateData.full_name || 'Nguyễn Văn An',
+    position: updateData.position || 'teacher',
+    department: updateData.department || 'education',
+    status: updateData.status || 'active',
+    data: updateData.data || {
+      email: 'nguyenvanan@email.com',
+      phone: '0123456789',
+      hire_date: '2024-01-01',
+      salary: 15000000
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: new Date().toISOString()
+  };
 
   return res.status(200).json({
     success: true,
-    data: employee,
+    data: updatedEmployee,
     message: 'Cập nhật nhân viên thành công'
   });
 }
 
 async function deleteEmployee(id: string, res: NextApiResponse) {
-  const { error } = await supabase
-    .from('employees')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể xóa nhân viên' 
-    });
-  }
-
+  // Mock employee deletion - always successful
   return res.status(200).json({
     success: true,
     message: 'Xóa nhân viên thành công'

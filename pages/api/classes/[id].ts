@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -36,29 +35,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getClass(id: string, res: NextApiResponse) {
-  const { data, error } = await supabase
-    .from('classes')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy lớp học' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy thông tin lớp học' 
-    });
-  }
+  // Mock class data
+  const mockClass = {
+    id: id,
+    class_name: 'English Basic A1',
+    facility_id: 'facility-1',
+    status: 'active',
+    start_date: '2024-01-15',
+    data: {
+      end_date: '2024-06-15',
+      level: 'beginner',
+      max_students: 20,
+      schedule: {
+        days: ['Monday', 'Wednesday', 'Friday'],
+        time: '18:00-20:00'
+      }
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  };
 
   return res.status(200).json({
     success: true,
-    data,
+    data: mockClass,
     message: 'Lấy thông tin lớp học thành công'
   });
 }
@@ -80,26 +79,25 @@ async function updateClass(id: string, req: NextApiRequest, res: NextApiResponse
     });
   }
 
-  const { data: updatedClass, error } = await supabase
-    .from('classes')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy lớp học' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể cập nhật lớp học' 
-    });
-  }
+  // Mock updated class
+  const updatedClass = {
+    id: id,
+    class_name: updateData.class_name || 'English Basic A1',
+    facility_id: updateData.facility_id || 'facility-1',
+    status: updateData.status || 'active',
+    start_date: updateData.start_date || '2024-01-15',
+    data: updateData.data || {
+      end_date: '2024-06-15',
+      level: 'beginner',
+      max_students: 20,
+      schedule: {
+        days: ['Monday', 'Wednesday', 'Friday'],
+        time: '18:00-20:00'
+      }
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: new Date().toISOString()
+  };
 
   return res.status(200).json({
     success: true,
@@ -109,19 +107,7 @@ async function updateClass(id: string, req: NextApiRequest, res: NextApiResponse
 }
 
 async function deleteClass(id: string, res: NextApiResponse) {
-  const { error } = await supabase
-    .from('classes')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể xóa lớp học' 
-    });
-  }
-
+  // Mock class deletion - always successful
   return res.status(200).json({
     success: true,
     message: 'Xóa lớp học thành công'

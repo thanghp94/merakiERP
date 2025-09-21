@@ -26,7 +26,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
       // Check role if required
       if (requiredRole.length > 0) {
-        const userRole = user.user_metadata?.role || 'student';
+        const userRole = user.role || 'student';
         
         if (!requiredRole.includes(userRole)) {
           // User doesn't have required role
@@ -55,7 +55,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requiredRole.length > 0) {
-    const userRole = user.user_metadata?.role || 'student';
+    const userRole = user.role || 'student';
     if (!requiredRole.includes(userRole)) {
       return null; // Will redirect
     }

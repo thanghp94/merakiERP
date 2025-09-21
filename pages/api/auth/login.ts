@@ -1,46 +1,80 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
-import { supabase } from '../../../lib/supabase';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../../lib/firebase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({
+      success: false,
+      message: 'Method not allowed'
+    });
   }
 
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+    return res.status(400).json({
+      success: false,
+      error: 'Email and password are required'
+    });
   }
 
   try {
-    // Authenticate user with Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error || !data.user) {
-      return res.status(401).json({ error: error?.message || 'Invalid credentials' });
+    // Sign in with Firebase Auth
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication failed'
+      });
     }
 
-    // Create JWT payload
-    const payload = {
-      id: data.user.id,
-      email: data.user.email,
-      role: data.user.user_metadata?.role || 'student',
-    };
-
-    // Sign JWT token
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
-
-    // Set token in HTTP-only cookie
-    res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Strict; Secure`);
-
-    return res.status(200).json({ message: 'Login successful', token });
-  } catch (err) {
-    return res.status(500).json({ error: 'Internal server error' });
+    // Get the Firebase ID token
+    const token = await user.getIdToken();
+    
+    return res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: user.uid,
+        email: user.email,
+        role: 'student' // Default role, should be set via custom claims
+      },
+      message: 'Login successful'
+    });
+    
+  } catch (error: any) {
+    console.error('Login error:', error);
+    
+    let errorMessage = 'Login failed';
+    
+    // Handle specific Firebase auth errors
+    switch (error.code) {
+      case 'auth/user-not-found':
+        errorMessage = 'User not found';
+        break;
+      case 'auth/wrong-password':
+        errorMessage = 'Incorrect password';
+        break;
+      case 'auth/invalid-email':
+        errorMessage = 'Invalid email address';
+        break;
+      case 'auth/user-disabled':
+        errorMessage = 'Account has been disabled';
+        break;
+      case 'auth/too-many-requests':
+        errorMessage = 'Too many failed attempts. Please try again later';
+        break;
+      default:
+        errorMessage = error.message || 'Login failed';
+    }
+    
+    return res.status(401).json({
+      success: false,
+      error: errorMessage
+    });
   }
 }

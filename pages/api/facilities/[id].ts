@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -36,29 +35,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getFacility(id: string, res: NextApiResponse) {
-  const { data, error } = await supabase
-    .from('facilities')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy cơ sở' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy thông tin cơ sở' 
-    });
-  }
+  // Mock facility data
+  const mockFacility = {
+    id: id,
+    name: 'Trung tâm Tiếng Anh Quận 1',
+    status: 'active',
+    data: {
+      address: '123 Nguyễn Huệ , Quận 1, TP.HCM',
+      phone: '028-123-4567',
+      capacity: 200,
+      facilities: ['wifi', 'projector', 'air_conditioning']
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  };
 
   return res.status(200).json({
     success: true,
-    data,
+    data: mockFacility,
     message: 'Lấy thông tin cơ sở thành công'
   });
 }
@@ -78,48 +72,30 @@ async function updateFacility(id: string, req: NextApiRequest, res: NextApiRespo
     });
   }
 
-  const { data: facility, error } = await supabase
-    .from('facilities')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy cơ sở' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể cập nhật cơ sở' 
-    });
-  }
+  // Mock updated facility
+  const updatedFacility = {
+    id: id,
+    name: updateData.name || 'Trung tâm Tiếng Anh Quận 1',
+    status: updateData.status || 'active',
+    data: updateData.data || {
+      address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
+      phone: '028-123-4567',
+      capacity: 200,
+      facilities: ['wifi', 'projector', 'air_conditioning']
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: new Date().toISOString()
+  };
 
   return res.status(200).json({
     success: true,
-    data: facility,
+    data: updatedFacility,
     message: 'Cập nhật cơ sở thành công'
   });
 }
 
 async function deleteFacility(id: string, res: NextApiResponse) {
-  const { error } = await supabase
-    .from('facilities')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể xóa cơ sở' 
-    });
-  }
-
+  // Mock facility deletion - always successful
   return res.status(200).json({
     success: true,
     message: 'Xóa cơ sở thành công'

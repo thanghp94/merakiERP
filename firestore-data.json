@@ -1,0 +1,273 @@
+{
+  "facilities": {
+    "facility_001": {
+      "name": "Main Campus - District 1",
+      "status": "active",
+      "data": {
+        "address": "123 Main Street, District 1, Ho Chi Minh City",
+        "capacity": 500,
+        "contact_info": {
+          "phone": "028-1234-5678",
+          "email": "district1@merakierp.com"
+        },
+        "amenities": ["WiFi", "Projectors", "Audio System", "Library"]
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "facility_002": {
+      "name": "Branch Campus - District 7",
+      "status": "active",
+      "data": {
+        "address": "456 Secondary Road, District 7, Ho Chi Minh City",
+        "capacity": 300,
+        "contact_info": {
+          "phone": "028-8765-4321",
+          "email": "district7@merakierp.com"
+        },
+        "amenities": ["WiFi", "Projectors", "Audio System"]
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    }
+  },
+  "employees": {
+    "employee_001": {
+      "full_name": "Sarah Johnson",
+      "email": "sarah.johnson@merakierp.com",
+      "phone": "0901-234-567",
+      "position": "Senior English Teacher",
+      "status": "active",
+      "data": {
+        "hire_date": "2023-01-15",
+        "specialization": ["IELTS", "TOEFL", "Business English"],
+        "experience_years": 8
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "employee_002": {
+      "full_name": "Michael Chen",
+      "email": "michael.chen@merakierp.com",
+      "phone": "0902-345-678",
+      "position": "English Teacher",
+      "status": "active",
+      "data": {
+        "hire_date": "2023-06-01",
+        "specialization": ["Grammar", "Conversation", "Business English"],
+        "experience_years": 5
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    }
+  },
+  "classes": {
+    "class_001": {
+      "class_name": "English Beginner A1 - Morning",
+      "facility_id": "facility_001",
+      "status": "active",
+      "start_date": "2024-01-15",
+      "data": {
+        "end_date": "2024-04-15",
+        "level": "beginner",
+        "max_students": 15,
+        "schedule": {
+          "days": ["Monday", "Wednesday", "Friday"],
+          "time": "08:00-10:00"
+        },
+        "instructor_id": "employee_001",
+        "description": "Basic English for absolute beginners"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "class_002": {
+      "class_name": "IELTS Preparation - Evening",
+      "facility_id": "facility_001",
+      "status": "active",
+      "start_date": "2024-02-01",
+      "data": {
+        "end_date": "2024-05-01",
+        "level": "intermediate",
+        "max_students": 12,
+        "schedule": {
+          "days": ["Tuesday", "Thursday"],
+          "time": "18:00-20:00"
+        },
+        "instructor_id": "employee_001",
+        "description": "IELTS test preparation course"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "class_003": {
+      "class_name": "Business English - Afternoon",
+      "facility_id": "facility_002",
+      "status": "active",
+      "start_date": "2024-03-01",
+      "data": {
+        "end_date": "2024-06-01",
+        "level": "intermediate",
+        "max_students": 10,
+        "schedule": {
+          "days": ["Monday", "Wednesday"],
+          "time": "14:00-16:00"
+        },
+        "instructor_id": "employee_002",
+        "description": "Professional English for business contexts"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    }
+  },
+  "students": {
+    "student_001": {
+      "full_name": "Nguyen Van An",
+      "email": "an.nguyen@email.com",
+      "phone": "0912-345-678",
+      "status": "active",
+      "data": {
+        "date_of_birth": "1995-03-15",
+        "address": "789 Student Street, District 3, Ho Chi Minh City",
+        "expected_campus": "CS1",
+        "program": "IELTS Preparation",
+        "current_english_level": "Pre-intermediate",
+        "parent": {
+          "name": "Nguyen Van Ba",
+          "phone": "0913-456-789",
+          "email": "ba.nguyen@email.com"
+        },
+        "notes": "Motivated student, good attendance"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "student_002": {
+      "full_name": "Tran Thi Linh",
+      "email": "linh.tran@email.com",
+      "phone": "0987-654-321",
+      "status": "active",
+      "data": {
+        "date_of_birth": "1998-07-22",
+        "address": "321 Learning Avenue, District 1, Ho Chi Minh City",
+        "expected_campus": "CS1",
+        "program": "Business English",
+        "current_english_level": "Beginner",
+        "parent": {
+          "name": "Tran Van Duc",
+          "phone": "0988-765-432",
+          "email": "duc.tran@email.com"
+        },
+        "notes": "Needs extra help with pronunciation"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "student_003": {
+      "full_name": "Le Minh Duc",
+      "email": "duc.le@email.com",
+      "phone": "0976-543-210",
+      "status": "active",
+      "data": {
+        "date_of_birth": "1996-11-08",
+        "address": "456 Business Street, District 7, Ho Chi Minh City",
+        "expected_campus": "CS2",
+        "program": "Business English",
+        "current_english_level": "Intermediate",
+        "parent": {
+          "name": "Le Van Minh",
+          "phone": "0977-654-321",
+          "email": "minh.le@email.com"
+        },
+        "notes": "Professional development focus"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    }
+  },
+  "enrollments": {
+    "enrollment_001": {
+      "student_id": "student_001",
+      "class_id": "class_002",
+      "enrollment_date": "2024-01-20",
+      "status": "active",
+      "data": {
+        "payment_status": "paid",
+        "enrollment_fee": 2500000,
+        "notes": "Full payment received"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "enrollment_002": {
+      "student_id": "student_002",
+      "class_id": "class_001",
+      "enrollment_date": "2024-01-10",
+      "status": "active",
+      "data": {
+        "payment_status": "partial",
+        "enrollment_fee": 1800000,
+        "notes": "Payment plan: 50% paid, remainder due next month"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "enrollment_003": {
+      "student_id": "student_003",
+      "class_id": "class_003",
+      "enrollment_date": "2024-02-15",
+      "status": "active",
+      "data": {
+        "payment_status": "paid",
+        "enrollment_fee": 3000000,
+        "notes": "Corporate training program"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    }
+  },
+  "finances": {
+    "finance_001": {
+      "student_id": "student_001",
+      "amount": 2500000,
+      "transaction_type": "payment",
+      "transaction_date": "2024-01-20",
+      "status": "completed",
+      "description": "IELTS Course Enrollment Fee",
+      "data": {
+        "payment_method": "bank_transfer",
+        "reference_number": "TXN-2024-001"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "finance_002": {
+      "student_id": "student_002",
+      "amount": 900000,
+      "transaction_type": "payment",
+      "transaction_date": "2024-01-10",
+      "status": "completed",
+      "description": "Beginner Course - Partial Payment",
+      "data": {
+        "payment_method": "cash",
+        "reference_number": "TXN-2024-002"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    },
+    "finance_003": {
+      "student_id": "student_003",
+      "amount": 3000000,
+      "transaction_type": "payment",
+      "transaction_date": "2024-02-15",
+      "status": "completed",
+      "description": "Business English Course Fee",
+      "data": {
+        "payment_method": "company_transfer",
+        "reference_number": "TXN-2024-003"
+      },
+      "created_at": "2024-09-20T18:00:00.000Z",
+      "updated_at": "2024-09-20T18:00:00.000Z"
+    }
+  }
+}

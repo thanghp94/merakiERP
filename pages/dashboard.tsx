@@ -2,7 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { useAuth } from '../lib/auth/AuthContext';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import { ROLES } from '../lib/auth/rbac';
+import { ROLES } from '../lib/auth/client-auth';
 
 const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();

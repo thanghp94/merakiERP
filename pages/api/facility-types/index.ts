@@ -1,30 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Static facility types data for Firebase version
+const facilityTypes = [
+  { value: 'Meraki', label: 'Meraki' },
+  { value: 'Trường đối tác', label: 'Trường đối tác' }
+];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      // Query to get enum values for loai_co_so type
-      const { data, error } = await supabase
-        .rpc('get_enum_values', { enum_name: 'loai_co_so' });
-
-      if (error) {
-        console.error('Error fetching facility types:', error);
-        return res.status(500).json({
-          success: false,
-          message: 'Lỗi khi lấy danh sách loại cơ sở',
-          error: error.message
-        });
-      }
-
       return res.status(200).json({
         success: true,
-        data: data || [],
+        data: facilityTypes,
         message: 'Lấy danh sách loại cơ sở thành công'
       });
     } catch (error) {

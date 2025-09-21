@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -36,48 +35,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getEnrollment(id: string, res: NextApiResponse) {
-  const { data, error } = await supabase
-    .from('enrollments')
-    .select(`
-      *,
-      students (
-        id,
-        full_name,
-        email,
-        phone,
-        status
-      ),
-      classes (
-        id,
-        class_name,
-        status,
-        start_date,
-        facilities (
-          id,
-          name
-        )
-      )
-    `)
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy đăng ký' 
-      });
+  // Mock enrollment data
+  const mockEnrollment = {
+    id: id,
+    student_id: 'student-1',
+    class_id: 'class-1',
+    enrollment_date: '2024-01-15',
+    status: 'active',
+    data: { payment_status: 'paid' },
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: '2024-01-15T00:00:00Z',
+    students: {
+      id: 'student-1',
+      full_name: 'Nguyễn Văn A',
+      email: 'nguyenvana@email.com',
+      phone: '0123456789',
+      status: 'active'
+    },
+    classes: {
+      id: 'class-1',
+      class_name: 'English Basic A1',
+      status: 'active',
+      start_date: '2024-01-15',
+      facilities: {
+        id: 'facility-1',
+        name: 'Trung tâm Quận 1'
+      }
     }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy thông tin đăng ký' 
-    });
-  }
+  };
 
   return res.status(200).json({
     success: true,
-    data,
+    data: mockEnrollment,
     message: 'Lấy thông tin đăng ký thành công'
   });
 }
@@ -99,74 +88,34 @@ async function updateEnrollment(id: string, req: NextApiRequest, res: NextApiRes
     });
   }
 
-  // If updating student_id or class_id, check for duplicate enrollment
-  if (updateData.student_id || updateData.class_id) {
-    const { data: currentEnrollment } = await supabase
-      .from('enrollments')
-      .select('student_id, class_id')
-      .eq('id', id)
-      .single();
-
-    if (currentEnrollment) {
-      const checkStudentId = updateData.student_id || currentEnrollment.student_id;
-      const checkClassId = updateData.class_id || currentEnrollment.class_id;
-
-      const { data: existingEnrollment } = await supabase
-        .from('enrollments')
-        .select('id')
-        .eq('student_id', checkStudentId)
-        .eq('class_id', checkClassId)
-        .neq('id', id)
-        .single();
-
-      if (existingEnrollment) {
-        return res.status(409).json({ 
-          success: false, 
-          message: 'Học sinh đã được đăng ký vào lớp học này' 
-        });
+  // Mock updated enrollment
+  const updatedEnrollment = {
+    id: id,
+    student_id: updateData.student_id || 'student-1',
+    class_id: updateData.class_id || 'class-1',
+    enrollment_date: updateData.enrollment_date || '2024-01-15',
+    status: updateData.status || 'active',
+    data: updateData.data || { payment_status: 'paid' },
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: new Date().toISOString(),
+    students: {
+      id: updateData.student_id || 'student-1',
+      full_name: 'Nguyễn Văn A',
+      email: 'nguyenvana@email.com',
+      phone: '0123456789',
+      status: 'active'
+    },
+    classes: {
+      id: updateData.class_id || 'class-1',
+      class_name: 'English Basic A1',
+      status: 'active',
+      start_date: '2024-01-15',
+      facilities: {
+        id: 'facility-1',
+        name: 'Trung tâm Quận 1'
       }
     }
-  }
-
-  const { data: updatedEnrollment, error } = await supabase
-    .from('enrollments')
-    .update(updateData)
-    .eq('id', id)
-    .select(`
-      *,
-      students (
-        id,
-        full_name,
-        email,
-        phone,
-        status
-      ),
-      classes (
-        id,
-        class_name,
-        status,
-        start_date,
-        facilities (
-          id,
-          name
-        )
-      )
-    `)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy đăng ký' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể cập nhật đăng ký' 
-    });
-  }
+  };
 
   return res.status(200).json({
     success: true,
@@ -176,19 +125,7 @@ async function updateEnrollment(id: string, req: NextApiRequest, res: NextApiRes
 }
 
 async function deleteEnrollment(id: string, res: NextApiResponse) {
-  const { error } = await supabase
-    .from('enrollments')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể xóa đăng ký' 
-    });
-  }
-
+  // Mock enrollment deletion - always successful
   return res.status(200).json({
     success: true,
     message: 'Xóa đăng ký thành công'

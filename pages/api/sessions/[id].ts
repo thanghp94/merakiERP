@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -36,73 +35,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getSession(req: NextApiRequest, res: NextApiResponse, id: string) {
-  // First get the session
-  const { data: session, error: sessionError } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('id', id)
-    .single();
+  // Mock session data
+  const mockSession = {
+    id: id,
+    lesson_id: 'main-session-1',
+    subject_type: 'speaking',
+    teacher_id: 'teacher-1',
+    teaching_assistant_id: 'ta-1',
+    location_id: 'room-1',
+    start_time: '09:00',
+    end_time: '10:30',
+    data: { notes: 'Focus on pronunciation' },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  };
 
-  if (sessionError) {
-    console.error('Supabase error:', sessionError);
-    return res.status(404).json({ 
-      success: false, 
-      message: 'Không tìm thấy session' 
-    });
-  }
-
-  // Get the main session
-  const { data: mainSession, error: mainSessionError } = await supabase
-    .from('main_sessions')
-    .select(`
-      main_session_id,
-      main_session_name,
-      scheduled_date,
-      class_id,
-      classes (
-        id,
-        class_name,
-        data
-      )
-    `)
-    .eq('main_session_id', session.lesson_id)
-    .single();
-
-  if (mainSessionError) {
-    console.error('Main session error:', mainSessionError);
-  }
-
-  // Get teacher info
-  const { data: teacher, error: teacherError } = await supabase
-    .from('employees')
-    .select('id, full_name')
-    .eq('id', session.teacher_id)
-    .single();
-
-  if (teacherError) {
-    console.error('Teacher error:', teacherError);
-  }
-
-  // Get teaching assistant info if exists
-  let teachingAssistant = null;
-  if (session.teaching_assistant_id) {
-    const { data: ta, error: taError } = await supabase
-      .from('employees')
-      .select('id, full_name')
-      .eq('id', session.teaching_assistant_id)
-      .single();
-
-    if (!taError) {
-      teachingAssistant = ta;
+  // Mock main session
+  const mockMainSession = {
+    main_session_id: 'main-session-1',
+    main_session_name: 'Unit 1: Introduction',
+    scheduled_date: '2024-01-15',
+    class_id: 'class-1',
+    classes: {
+      id: 'class-1',
+      class_name: 'English Basic A1',
+      data: { level: 'beginner' }
     }
-  }
+  };
+
+  // Mock teacher
+  const mockTeacher = {
+    id: 'teacher-1',
+    full_name: 'Nguyễn Văn An'
+  };
+
+  // Mock teaching assistant
+  const mockTeachingAssistant = {
+    id: 'ta-1',
+    full_name: 'Trần Thị Bình'
+  };
 
   // Combine the data
   const combinedData = {
-    ...session,
-    main_sessions: mainSession,
-    teacher: teacher,
-    teaching_assistant: teachingAssistant
+    ...mockSession,
+    main_sessions: mockMainSession,
+    teacher: mockTeacher,
+    teaching_assistant: mockTeachingAssistant
   };
 
   return res.status(200).json({
@@ -133,74 +111,52 @@ async function updateSession(req: NextApiRequest, res: NextApiResponse, id: stri
   if (end_time !== undefined) updateData.end_time = end_time;
   if (data !== undefined) updateData.data = data;
 
-  // Update the session
-  const { data: session, error: updateError } = await supabase
-    .from('sessions')
-    .update(updateData)
-    .eq('id', id)
-    .select('*')
-    .single();
+  // Mock updated session
+  const updatedSession = {
+    id: id,
+    lesson_id: 'main-session-1',
+    subject_type: updateData.subject_type || 'speaking',
+    teacher_id: updateData.teacher_id || 'teacher-1',
+    teaching_assistant_id: updateData.teaching_assistant_id || 'ta-1',
+    location_id: updateData.location_id || 'room-1',
+    start_time: updateData.start_time || '09:00',
+    end_time: updateData.end_time || '10:30',
+    data: updateData.data || { notes: 'Updated session' },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: new Date().toISOString()
+  };
 
-  if (updateError) {
-    console.error('Supabase error:', updateError);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể cập nhật session' 
-    });
-  }
-
-  // Get the main session
-  const { data: mainSession, error: mainSessionError } = await supabase
-    .from('main_sessions')
-    .select(`
-      main_session_id,
-      main_session_name,
-      scheduled_date,
-      class_id,
-      classes (
-        id,
-        class_name,
-        data
-      )
-    `)
-    .eq('main_session_id', session.lesson_id)
-    .single();
-
-  if (mainSessionError) {
-    console.error('Main session error:', mainSessionError);
-  }
-
-  // Get teacher info
-  const { data: teacher, error: teacherError } = await supabase
-    .from('employees')
-    .select('id, full_name')
-    .eq('id', session.teacher_id)
-    .single();
-
-  if (teacherError) {
-    console.error('Teacher error:', teacherError);
-  }
-
-  // Get teaching assistant info if exists
-  let teachingAssistant = null;
-  if (session.teaching_assistant_id) {
-    const { data: ta, error: taError } = await supabase
-      .from('employees')
-      .select('id, full_name')
-      .eq('id', session.teaching_assistant_id)
-      .single();
-
-    if (!taError) {
-      teachingAssistant = ta;
+  // Mock main session
+  const mockMainSession = {
+    main_session_id: 'main-session-1',
+    main_session_name: 'Unit 1: Introduction',
+    scheduled_date: '2024-01-15',
+    class_id: 'class-1',
+    classes: {
+      id: 'class-1',
+      class_name: 'English Basic A1',
+      data: { level: 'beginner' }
     }
-  }
+  };
+
+  // Mock teacher
+  const mockTeacher = {
+    id: updatedSession.teacher_id,
+    full_name: 'Nguyễn Văn An'
+  };
+
+  // Mock teaching assistant
+  const mockTeachingAssistant = {
+    id: updatedSession.teaching_assistant_id,
+    full_name: 'Trần Thị Bình'
+  };
 
   // Combine the data
   const combinedData = {
-    ...session,
-    main_sessions: mainSession,
-    teacher: teacher,
-    teaching_assistant: teachingAssistant
+    ...updatedSession,
+    main_sessions: mockMainSession,
+    teacher: mockTeacher,
+    teaching_assistant: mockTeachingAssistant
   };
 
   return res.status(200).json({
@@ -211,19 +167,7 @@ async function updateSession(req: NextApiRequest, res: NextApiResponse, id: stri
 }
 
 async function deleteSession(req: NextApiRequest, res: NextApiResponse, id: string) {
-  const { error } = await supabase
-    .from('sessions')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể xóa session' 
-    });
-  }
-
+  // Mock session deletion - always successful
   return res.status(200).json({
     success: true,
     message: 'Xóa session thành công'

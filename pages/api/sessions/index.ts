@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -27,117 +26,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getSessions(req: NextApiRequest, res: NextApiResponse) {
   const { class_id, teacher_id, start_date, end_date, limit = 100, offset = 0 } = req.query;
 
-  // Query with joins to get main_sessions, classes, and teacher data
-  let query = supabase
-    .from('sessions')
-    .select(`
-      *,
-      main_sessions!sessions_main_session_id_fkey (
-        main_session_id,
-        main_session_name,
-        scheduled_date,
-        class_id,
-        classes (
-          id,
-          class_name,
-          data
-        )
-      ),
-      teacher:employees!sessions_teacher_id_fkey (
-        id,
-        full_name
-      )
-    `)
-    .order('start_time', { ascending: true });
-
-  // Filter by date range if provided (for schedule view)
-  if (start_date && end_date) {
-    query = query
-      .gte('date', start_date)
-      .lte('date', end_date);
-  }
-
-  if (class_id) {
-    // Filter by class through main_sessions relationship
-    query = query.eq('main_sessions.class_id', class_id);
-  }
-
-  if (teacher_id) {
-    query = query.eq('teacher_id', teacher_id);
-  }
-
-  if (limit && !start_date) { // Don't limit for schedule view
-    query = query.limit(parseInt(limit as string));
-  }
-
-  if (offset && !start_date) { // Don't offset for schedule view
-    query = query.range(
-      parseInt(offset as string), 
-      parseInt(offset as string) + parseInt(limit as string) - 1
-    );
-  }
-
-  const { data: sessions, error } = await query;
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy danh sách sessions' 
-    });
-  }
-
-  // Fetch TA data separately for sessions that have teaching_assistant_id
-  const sessionsWithTA = await Promise.all(
-    sessions.map(async (session) => {
-      if (session.teaching_assistant_id) {
-        const { data: ta } = await supabase
-          .from('employees')
-          .select('id, full_name')
-          .eq('id', session.teaching_assistant_id)
-          .single();
-        
-        return {
-          ...session,
-          teaching_assistant: ta
-        };
-      }
-      return session;
-    })
-  );
-
-  // Fetch facilities data to resolve room names
-  const { data: facilities } = await supabase
-    .from('facilities')
-    .select('id, name, data');
-
-  // Add room information to sessions
-  const sessionsWithRooms = sessionsWithTA.map(session => {
-    if (session.location_id && facilities) {
-      // Find the facility that contains this room
-      for (const facility of facilities) {
-        if (facility.data?.rooms) {
-          const room = facility.data.rooms.find((r: any) => r.id === session.location_id);
-          if (room) {
-            return {
-              ...session,
-              location: {
-                facility_name: facility.name,
-                room_name: room.name,
-                room_id: room.id
-              }
-            };
-          }
+  // Firebase placeholder - return empty sessions list
+  const mockSessions = [
+    {
+      id: 'mock-session-1',
+      main_session_id: 'mock-main-session-1',
+      subject_type: 'TSI',
+      teacher_id: 'mock-teacher-1',
+      teaching_assistant_id: null,
+      location_id: 'room-1',
+      start_time: '2025-01-21T02:00:00.000Z',
+      end_time: '2025-01-21T03:30:00.000Z',
+      date: '2025-01-21',
+      main_sessions: {
+        main_session_id: 'mock-main-session-1',
+        main_session_name: 'Buổi học mẫu',
+        scheduled_date: '2025-01-21',
+        class_id: 'mock-class-1',
+        classes: {
+          id: 'mock-class-1',
+          class_name: 'Lớp mẫu',
+          data: {}
         }
+      },
+      teacher: {
+        id: 'mock-teacher-1',
+        full_name: 'Giáo viên mẫu'
+      },
+      location: {
+        facility_name: 'Cơ sở Meraki',
+        room_name: 'Phòng 1',
+        room_id: 'room-1'
       }
     }
-    return session;
-  });
+  ];
 
   return res.status(200).json({
     success: true,
-    data: sessionsWithRooms,
-    message: 'Lấy danh sách sessions thành công'
+    data: mockSessions,
+    message: 'Lấy danh sách sessions thành công (Firebase placeholder)'
   });
 }
 
@@ -188,53 +115,23 @@ async function createSession(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const { data: session, error } = await supabase
-    .from('sessions')
-    .insert({
-      lesson_id: parseInt(lesson_id),
-      subject_type,
-      teacher_id,
-      teaching_assistant_id: teaching_assistant_id || null,
-      location_id: location_id || null,
-      start_time,
-      end_time,
-      data
-    })
-    .select(`
-      *,
-      main_sessions!fk_sessions_lesson_id (
-        main_session_id,
-        main_session_name,
-        scheduled_date,
-        class_id,
-        classes (
-          id,
-          class_name,
-          data
-        )
-      ),
-      employees!fk_sessions_teacher_id (
-        id,
-        full_name
-      ),
-      employees!fk_sessions_ta_id (
-        id,
-        full_name
-      )
-    `)
-    .single();
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể tạo session mới' 
-    });
-  }
+  // Firebase placeholder - simulate session creation
+  const mockSession = {
+    id: `mock-session-${Date.now()}`,
+    lesson_id: parseInt(lesson_id),
+    subject_type,
+    teacher_id,
+    teaching_assistant_id: teaching_assistant_id || null,
+    location_id: location_id || null,
+    start_time,
+    end_time,
+    data,
+    created_at: new Date().toISOString()
+  };
 
   return res.status(201).json({
     success: true,
-    data: session,
-    message: 'Tạo session mới thành công'
+    data: mockSession,
+    message: 'Tạo session mới thành công (Firebase placeholder)'
   });
 }

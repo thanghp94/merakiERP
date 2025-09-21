@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
+import { useAuth } from '../lib/auth/AuthContext';
+import ProtectedRoute from '../components/auth/ProtectedRoute';
+import { ROLES } from '../lib/auth/client-auth';
 import { TabType, ApiTestResult, Class, Facility, ProgramType, UnitOption, Employee, Student, Enrollment, Attendance, Finance, Task } from '../components/dashboard/types';
 import { tabs, getNextSuggestedUnit } from '../components/dashboard/utils';
 import FacilitiesTab from '../components/dashboard/FacilitiesTab';
@@ -15,6 +19,7 @@ import UnitTransitionModal from '../components/dashboard/UnitTransitionModal';
 import ClassEnrollmentModal from '../components/dashboard/ClassEnrollmentModal';
 
 export default function TestDashboard() {
+  const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('facilities');
   const [apiResults, setApiResults] = useState<ApiTestResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -654,20 +659,72 @@ export default function TestDashboard() {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case ROLES.ADMIN:
+        return 'Quản trị viên';
+      case ROLES.TEACHER:
+        return 'Giáo viên';
+      case ROLES.TA:
+        return 'Trợ giảng';
+      case ROLES.STUDENT:
+        return 'Học sinh';
+      default:
+        return 'Người dùng';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <h1 className="text-3xl font-bold text-gray-900">
-              🎓 Meraki ERP - Test Dashboard (Refactored)
-            </h1>
-            <div className="text-sm text-gray-500">
+    <ProtectedRoute>
+      <Head>
+        <title>Test Dashboard - MerakiERP</title>
+        <meta name="description" content="Dashboard quản lý trung tâm" />
+      </Head>
+
+      <div className="min-h-screen bg-gray-100">
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <h1 className="text-3xl font-bold text-gray-900">
+                🎓 Meraki ERP - Test Dashboard (Refactored)
+              </h1>
+              
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">
+                      {user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                  <div className="hidden md:block">
+                    <p className="text-sm font-medium text-gray-900">
+                      {user?.displayName || user?.email}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {getRoleDisplayName(user?.role || 'student')}
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handleSignOut}
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            </div>
+            
+            <div className="text-sm text-gray-500 pb-2">
               English Language Center Management System
             </div>
           </div>
         </div>
-      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -722,5 +779,6 @@ export default function TestDashboard() {
         }}
       />
     </div>
+    </ProtectedRoute>
   );
 }

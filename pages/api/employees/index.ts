@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -27,47 +26,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
   const { status, department, position, limit = 50, offset = 0 } = req.query;
 
-  let query = supabase
-    .from('employees')
-    .select('*')
-    .order('created_at', { ascending: false });
+  // Mock employees data
+  const mockEmployees = [
+    {
+      id: '1',
+      full_name: 'Nguyễn Văn An',
+      position: 'teacher',
+      department: 'education',
+      status: 'active',
+      data: {
+        email: 'nguyenvanan@email.com',
+        phone: '0123456789',
+        hire_date: '2024-01-01',
+        salary: 15000000
+      },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: '2',
+      full_name: 'Trần Thị Bình',
+      position: 'assistant',
+      department: 'education',
+      status: 'active',
+      data: {
+        email: 'tranthibinh@email.com',
+        phone: '0987654321',
+        hire_date: '2024-01-15',
+        salary: 8000000
+      },
+      created_at: '2024-01-15T00:00:00Z',
+      updated_at: '2024-01-15T00:00:00Z'
+    }
+  ];
+
+  // Apply filters
+  let filteredEmployees = mockEmployees;
 
   if (status) {
-    query = query.eq('status', status);
+    filteredEmployees = filteredEmployees.filter(employee => employee.status === status);
   }
 
   if (department) {
-    query = query.eq('department', department);
+    filteredEmployees = filteredEmployees.filter(employee => employee.department === department);
   }
 
   if (position) {
-    query = query.eq('position', position);
+    filteredEmployees = filteredEmployees.filter(employee => employee.position === position);
   }
 
-  if (limit) {
-    query = query.limit(parseInt(limit as string));
-  }
-
-  if (offset) {
-    query = query.range(
-      parseInt(offset as string), 
-      parseInt(offset as string) + parseInt(limit as string) - 1
-    );
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy danh sách nhân viên' 
-    });
-  }
+  // Apply pagination
+  const offsetNum = parseInt(offset as string);
+  const limitNum = parseInt(limit as string);
+  const paginatedEmployees = filteredEmployees.slice(offsetNum, offsetNum + limitNum);
 
   return res.status(200).json({
     success: true,
-    data,
+    data: paginatedEmployees,
     message: 'Lấy danh sách nhân viên thành công'
   });
 }
@@ -96,29 +111,21 @@ async function createEmployee(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const { data: employee, error } = await supabase
-    .from('employees')
-    .insert({
-      full_name,
-      position,
-      department,
-      status,
-      data
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể tạo nhân viên mới' 
-    });
-  }
+  // Mock employee creation
+  const newEmployee = {
+    id: `employee-${Date.now()}`,
+    full_name,
+    position,
+    department,
+    status,
+    data,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
 
   return res.status(201).json({
     success: true,
-    data: employee,
+    data: newEmployee,
     message: 'Tạo nhân viên mới thành công'
   });
 }

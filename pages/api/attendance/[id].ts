@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -36,40 +35,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getAttendance(id: string, res: NextApiResponse) {
-  const { data, error } = await supabase
-    .from('attendance')
-    .select(`
-      *,
-      enrollments (
-        id,
-        students (
-          id,
-          full_name,
-          email,
-          phone
-        )
-      )
-    `)
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy điểm danh' 
-      });
+  // Mock attendance data
+  const mockAttendance = {
+    id: id,
+    main_session_id: 'main-session-1',
+    enrollment_id: 'enrollment-1',
+    status: 'present',
+    data: { arrived_at: '09:00', notes: 'On time' },
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: '2024-01-15T00:00:00Z',
+    enrollments: {
+      id: 'enrollment-1',
+      students: {
+        id: 'student-1',
+        full_name: 'Nguyễn Văn A',
+        email: 'nguyenvana@email.com',
+        phone: '0123456789'
+      }
     }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy thông tin điểm danh' 
-    });
-  }
+  };
 
   return res.status(200).json({
     success: true,
-    data,
+    data: mockAttendance,
     message: 'Lấy thông tin điểm danh thành công'
   });
 }
@@ -90,59 +78,35 @@ async function updateAttendance(id: string, req: NextApiRequest, res: NextApiRes
     });
   }
 
-  const { data: attendance, error } = await supabase
-    .from('attendance')
-    .update(updateData)
-    .eq('id', id)
-    .select(`
-      *,
-      enrollments (
-        id,
-        students (
-          id,
-          full_name,
-          email,
-          phone
-        )
-      )
-    `)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy điểm danh' 
-      });
+  // Mock updated attendance
+  const updatedAttendance = {
+    id: id,
+    main_session_id: 'main-session-1',
+    enrollment_id: updateData.enrollment_id || 'enrollment-1',
+    status: updateData.status || 'present',
+    data: updateData.data || { arrived_at: '09:00', notes: 'Updated' },
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: new Date().toISOString(),
+    enrollments: {
+      id: updateData.enrollment_id || 'enrollment-1',
+      students: {
+        id: 'student-1',
+        full_name: 'Nguyễn Văn A',
+        email: 'nguyenvana@email.com',
+        phone: '0123456789'
+      }
     }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể cập nhật điểm danh' 
-    });
-  }
+  };
 
   return res.status(200).json({
     success: true,
-    data: attendance,
+    data: updatedAttendance,
     message: 'Cập nhật điểm danh thành công'
   });
 }
 
 async function deleteAttendance(id: string, res: NextApiResponse) {
-  const { error } = await supabase
-    .from('attendance')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể xóa điểm danh' 
-    });
-  }
-
+  // Mock attendance deletion - always successful
   return res.status(200).json({
     success: true,
     message: 'Xóa điểm danh thành công'

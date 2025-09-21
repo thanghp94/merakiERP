@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -36,29 +35,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getFinance(id: string, res: NextApiResponse) {
-  const { data, error } = await supabase
-    .from('finances')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy giao dịch' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy thông tin giao dịch' 
-    });
-  }
+  // Mock finance data
+  const mockFinance = {
+    id: id,
+    type: 'income',
+    category: 'tuition',
+    amount: 5000000,
+    description: 'Học phí tháng 1',
+    reference_id: 'student-1',
+    reference_type: 'student',
+    transaction_date: '2024-01-15',
+    status: 'completed',
+    data: { payment_method: 'bank_transfer' },
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: '2024-01-15T00:00:00Z'
+  };
 
   return res.status(200).json({
     success: true,
-    data,
+    data: mockFinance,
     message: 'Lấy thông tin giao dịch thành công'
   });
 }
@@ -84,48 +79,31 @@ async function updateFinance(id: string, req: NextApiRequest, res: NextApiRespon
     });
   }
 
-  const { data: finance, error } = await supabase
-    .from('finances')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy giao dịch' 
-      });
-    }
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể cập nhật giao dịch' 
-    });
-  }
+  // Mock updated finance
+  const updatedFinance = {
+    id: id,
+    type: updateData.type || 'income',
+    category: updateData.category || 'tuition',
+    amount: updateData.amount || 5000000,
+    description: updateData.description || 'Updated transaction',
+    reference_id: updateData.reference_id || 'student-1',
+    reference_type: updateData.reference_type || 'student',
+    transaction_date: updateData.transaction_date || '2024-01-15',
+    status: updateData.status || 'completed',
+    data: updateData.data || { updated: true },
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: new Date().toISOString()
+  };
 
   return res.status(200).json({
     success: true,
-    data: finance,
+    data: updatedFinance,
     message: 'Cập nhật giao dịch thành công'
   });
 }
 
 async function deleteFinance(id: string, res: NextApiResponse) {
-  const { error } = await supabase
-    .from('finances')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể xóa giao dịch' 
-    });
-  }
-
+  // Mock finance deletion - always successful
   return res.status(200).json({
     success: true,
     message: 'Xóa giao dịch thành công'

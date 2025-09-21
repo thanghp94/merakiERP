@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withAuth, withTeacherOrAdmin, ROLES, filterDataByPermissions } from '../../../lib/auth/rbac';
+import { COLLECTIONS, getTimestamp } from '../../../lib/firebase-admin';
 
 // GET /api/students - View students (Teachers/Admins see all, Students see only themselves)
-const getStudents = withAuth(async (req, res, { user, supabase }) => {
+const getStudents = withAuth(async (req, res, { user, db }) => {
   const filters = {
     status: req.query.status as string,
     level: req.query.level as string,
@@ -12,38 +13,48 @@ const getStudents = withAuth(async (req, res, { user, supabase }) => {
   };
 
   try {
-    let query = supabase
-      .from('students')
-      .select('*')
-      .order('created_at', { ascending: false });
+    let query = db.collection(COLLECTIONS.STUDENTS);
 
     // Apply filters
     if (filters.status) {
-      query = query.eq('status', filters.status);
+      query = query.where('status', '==', filters.status);
     }
 
     if (filters.level && filters.level !== 'all') {
-      query = query.eq('data->>level', filters.level);
+      query = query.where('data.level', '==', filters.level);
     }
 
-    if (filters.search) {
-      query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
-    }
-
+    // Apply limit and offset
     if (filters.limit) {
       query = query.limit(filters.limit);
     }
 
     if (filters.offset) {
-      query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+      query = query.offset(filters.offset);
     }
 
-    // For students, they can only see their own data (handled by RLS)
-    // For teachers/admins, they see all students (handled by RLS)
-    const { data: students, error } = await query;
+    // Order by created_at descending
+    query = query.orderBy('created_at', 'desc');
 
-    if (error) {
-      throw error;
+    const snapshot = await query.get();
+    let students = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Apply search filter (Firestore doesn't have case-insensitive text search)
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      students = students.filter(student => 
+        student.full_name?.toLowerCase().includes(searchTerm) ||
+        student.email?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // For students, they can only see their own data
+    // For teachers/admins, they see all students
+    if (user.role === ROLES.STUDENT) {
+      students = students.filter(student => student.id === user.id);
     }
 
     return res.status(200).json({
@@ -64,7 +75,7 @@ const getStudents = withAuth(async (req, res, { user, supabase }) => {
 });
 
 // POST /api/students - Create student (Teachers/Admins only)
-const createStudent = withTeacherOrAdmin(async (req, res, { user, supabase }) => {
+const createStudent = withTeacherOrAdmin(async (req, res, { user, db }) => {
   const studentData = req.body;
   
   // Basic validation
@@ -76,23 +87,18 @@ const createStudent = withTeacherOrAdmin(async (req, res, { user, supabase }) =>
   }
 
   try {
-    const { data: newStudent, error } = await supabase
-      .from('students')
-      .insert([{
-        ...studentData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single();
+    const newStudent = {
+      ...studentData,
+      created_at: getTimestamp(),
+      updated_at: getTimestamp()
+    };
 
-    if (error) {
-      throw error;
-    }
+    const docRef = await db.collection(COLLECTIONS.STUDENTS).add(newStudent);
+    const createdStudent = { id: docRef.id, ...newStudent };
 
     return res.status(201).json({
       success: true,
-      data: newStudent,
+      data: createdStudent,
       message: 'Student created successfully',
       created_by: user.email
     });

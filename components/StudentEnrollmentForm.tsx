@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const enrollmentSchema = z.object({
   full_name: z.string().min(2, 'Họ tên phải có ít nhất 2 ký tự'),
@@ -134,38 +135,37 @@ export default function StudentEnrollmentForm({ onSuccess, language = 'vi' }: St
     setError(null);
 
     try {
-      const { data: student, error } = await supabase
-        .from('students')
-        .insert({
-          full_name: data.full_name,
-          email: data.email || null,
-          phone: data.phone || null,
-          status: 'active',
-            data: {
-              date_of_birth: data.date_of_birth,
-              address: data.address,
-              expected_campus: data.expected_campus,
-              program: data.program,
-              student_description: data.student_description,
-              current_english_level: data.current_english_level,
-              parent: {
-                name: data.parent_name,
-                phone: data.parent_phone,
-                email: data.parent_email || null,
-              },
-              notes: data.notes,
-            },
-        })
-        .select()
-        .single();
+      const studentData = {
+        full_name: data.full_name,
+        email: data.email || null,
+        phone: data.phone || null,
+        status: 'active',
+        data: {
+          date_of_birth: data.date_of_birth,
+          address: data.address,
+          expected_campus: data.expected_campus,
+          program: data.program,
+          student_description: data.student_description,
+          current_english_level: data.current_english_level,
+          parent: {
+            name: data.parent_name,
+            phone: data.parent_phone,
+            email: data.parent_email || null,
+          },
+          notes: data.notes,
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
-
+      const docRef = await addDoc(collection(db, 'students'), studentData);
+      console.log('Student created with ID:', docRef.id);
+      
       reset();
       onSuccess?.();
+      setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : currentLabels.error);
-    } finally {
       setLoading(false);
     }
   };

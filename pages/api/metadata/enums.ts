@@ -1,10 +1,23 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Static enum data for Firebase version
+const enumData = {
+  loai_co_so: [
+    { value: 'Meraki', label: 'Meraki' },
+    { value: 'Trường đối tác', label: 'Trường đối tác' }
+  ],
+  program_type: [
+    { value: 'GrapeSEED', label: 'GrapeSEED' },
+    { value: 'Pre-WSC', label: 'Pre-WSC' },
+    { value: 'WSC', label: 'WSC' },
+    { value: 'Tiếng Anh Tiểu Học', label: 'Tiếng Anh Tiểu Học' },
+    { value: 'Gavel club', label: 'Gavel club' }
+  ],
+  unit_grapeseed: Array.from({ length: 30 }, (_, i) => ({
+    value: `U${i + 1}`,
+    label: `Unit ${i + 1}`
+  }))
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -18,37 +31,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      // Use RPC function to get enum values
-      const { data, error } = await supabase
-        .rpc('get_enum_values', { enum_type_name: type });
+      const data = enumData[type as keyof typeof enumData];
 
-      if (error) {
-        console.error('Error fetching enum values:', error);
-        
-        // Fallback for loai_co_so if RPC fails
-        if (type === 'loai_co_so') {
-          const facilityTypes = [
-            { value: 'Meraki', label: 'Meraki' },
-            { value: 'Trường đối tác', label: 'Trường đối tác' }
-          ];
-
-          return res.status(200).json({
-            success: true,
-            data: facilityTypes,
-            message: `Lấy giá trị enum ${type} thành công (fallback)`
-          });
-        }
-
-        return res.status(500).json({
+      if (!data) {
+        return res.status(404).json({
           success: false,
-          message: `Lỗi khi lấy giá trị enum cho ${type}`,
-          error: error.message
+          message: `Enum type "${type}" không tồn tại`
         });
       }
 
       return res.status(200).json({
         success: true,
-        data: data || [],
+        data: data,
         message: `Lấy giá trị enum ${type} thành công`
       });
     } catch (error) {

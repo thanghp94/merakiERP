@@ -10,7 +10,7 @@ const LoginPage: React.FC = () => {
   // Redirect if already logged in
   React.useEffect(() => {
     if (!loading && user) {
-      router.push('/dashboard');
+      router.push('/test-dashboard');
     }
   }, [user, loading, router]);
 
@@ -39,7 +39,7 @@ const LoginPage: React.FC = () => {
         </div>
         
         <LoginForm 
-          onSuccess={() => router.push('/dashboard')}
+          onSuccess={() => router.push('/test-dashboard')}
         />
       </div>
     </div>

@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -30,57 +29,67 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getAttendance(req: NextApiRequest, res: NextApiResponse) {
   const { main_session_id, enrollment_id, status, date, limit = 50, offset = 0 } = req.query;
 
-  let query = supabase
-    .from('attendance')
-    .select(`
-      *,
-      enrollments (
-        id,
-        students (
-          id,
-          full_name,
-          email
-        )
-      )
-    `)
-    .order('created_at', { ascending: false });
+  // Mock attendance data
+  const mockAttendance = [
+    {
+      id: '1',
+      main_session_id: 'main-session-1',
+      enrollment_id: 'enrollment-1',
+      status: 'present',
+      data: { arrived_at: '09:00', notes: 'On time' },
+      created_at: '2024-01-15T00:00:00Z',
+      updated_at: '2024-01-15T00:00:00Z',
+      enrollments: {
+        id: 'enrollment-1',
+        students: {
+          id: 'student-1',
+          full_name: 'Nguyễn Văn A',
+          email: 'nguyenvana@email.com'
+        }
+      }
+    },
+    {
+      id: '2',
+      main_session_id: 'main-session-1',
+      enrollment_id: 'enrollment-2',
+      status: 'absent',
+      data: { reason: 'sick' },
+      created_at: '2024-01-15T00:00:00Z',
+      updated_at: '2024-01-15T00:00:00Z',
+      enrollments: {
+        id: 'enrollment-2',
+        students: {
+          id: 'student-2',
+          full_name: 'Trần Thị B',
+          email: 'tranthib@email.com'
+        }
+      }
+    }
+  ];
+
+  // Apply filters
+  let filteredAttendance = mockAttendance;
 
   if (main_session_id) {
-    query = query.eq('main_session_id', main_session_id);
+    filteredAttendance = filteredAttendance.filter(attendance => attendance.main_session_id === main_session_id);
   }
 
   if (enrollment_id) {
-    query = query.eq('enrollment_id', enrollment_id);
+    filteredAttendance = filteredAttendance.filter(attendance => attendance.enrollment_id === enrollment_id);
   }
 
   if (status) {
-    query = query.eq('status', status);
+    filteredAttendance = filteredAttendance.filter(attendance => attendance.status === status);
   }
 
-  if (limit) {
-    query = query.limit(parseInt(limit as string));
-  }
-
-  if (offset) {
-    query = query.range(
-      parseInt(offset as string), 
-      parseInt(offset as string) + parseInt(limit as string) - 1
-    );
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy danh sách điểm danh' 
-    });
-  }
+  // Apply pagination
+  const offsetNum = parseInt(offset as string);
+  const limitNum = parseInt(limit as string);
+  const paginatedAttendance = filteredAttendance.slice(offsetNum, offsetNum + limitNum);
 
   return res.status(200).json({
     success: true,
-    data,
+    data: paginatedAttendance,
     message: 'Lấy danh sách điểm danh thành công'
   });
 }
@@ -102,53 +111,28 @@ async function createAttendance(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  // Check if attendance record already exists
-  const { data: existingAttendance } = await supabase
-    .from('attendance')
-    .select('id')
-    .eq('main_session_id', main_session_id)
-    .eq('enrollment_id', enrollment_id)
-    .single();
-
-  if (existingAttendance) {
-    return res.status(409).json({ 
-      success: false, 
-      message: 'Điểm danh cho học sinh này trong buổi học đã tồn tại' 
-    });
-  }
-
-  const { data: attendance, error } = await supabase
-    .from('attendance')
-    .insert({
-      main_session_id,
-      enrollment_id,
-      status,
-      data
-    })
-    .select(`
-      *,
-      enrollments (
-        id,
-        students (
-          id,
-          full_name,
-          email
-        )
-      )
-    `)
-    .single();
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể tạo điểm danh mới' 
-    });
-  }
+  // Mock attendance creation
+  const newAttendance = {
+    id: `attendance-${Date.now()}`,
+    main_session_id,
+    enrollment_id,
+    status,
+    data,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    enrollments: {
+      id: enrollment_id,
+      students: {
+        id: 'student-1',
+        full_name: 'Học sinh mới',
+        email: 'student@email.com'
+      }
+    }
+  };
 
   return res.status(201).json({
     success: true,
-    data: attendance,
+    data: newAttendance,
     message: 'Tạo điểm danh mới thành công'
   });
 }
@@ -170,99 +154,47 @@ async function createBulkAttendance(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  try {
-    // Get all active enrollments for this class
-    const { data: enrollments, error: enrollmentError } = await supabase
-      .from('enrollments')
-      .select(`
-        id,
-        students (
-          id,
-          full_name,
-          email
-        )
-      `)
-      .eq('class_id', class_id)
-      .eq('status', 'active');
-
-    if (enrollmentError) {
-      console.error('Error fetching enrollments:', enrollmentError);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Không thể lấy danh sách đăng ký' 
-      });
-    }
-
-    if (!enrollments || enrollments.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Không tìm thấy học sinh nào trong lớp này' 
-      });
-    }
-
-    // Check for existing attendance records
-    const { data: existingAttendance } = await supabase
-      .from('attendance')
-      .select('enrollment_id')
-      .eq('main_session_id', main_session_id);
-
-    const existingEnrollmentIds = existingAttendance?.map(a => a.enrollment_id) || [];
-
-    // Filter out enrollments that already have attendance records
-    const newEnrollments = enrollments.filter(enrollment => 
-      !existingEnrollmentIds.includes(enrollment.id)
-    );
-
-    if (newEnrollments.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: [],
-        message: 'Tất cả học sinh đã có điểm danh cho buổi học này'
-      });
-    }
-
-    // Create attendance records for all new enrollments
-    const attendanceRecords = newEnrollments.map(enrollment => ({
+  // Mock bulk attendance creation
+  const bulkAttendance = [
+    {
+      id: `attendance-${Date.now()}-1`,
       main_session_id,
-      enrollment_id: enrollment.id,
-      status: 'present', // Default to present
-      data: {}
-    }));
-
-    const { data: createdAttendance, error: createError } = await supabase
-      .from('attendance')
-      .insert(attendanceRecords)
-      .select(`
-        *,
-        enrollments (
-          id,
-          students (
-            id,
-            full_name,
-            email
-          )
-        )
-      `);
-
-    if (createError) {
-      console.error('Error creating bulk attendance:', createError);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Không thể tạo điểm danh hàng loạt' 
-      });
+      enrollment_id: 'enrollment-1',
+      status: 'present',
+      data: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      enrollments: {
+        id: 'enrollment-1',
+        students: {
+          id: 'student-1',
+          full_name: 'Nguyễn Văn A',
+          email: 'nguyenvana@email.com'
+        }
+      }
+    },
+    {
+      id: `attendance-${Date.now()}-2`,
+      main_session_id,
+      enrollment_id: 'enrollment-2',
+      status: 'present',
+      data: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      enrollments: {
+        id: 'enrollment-2',
+        students: {
+          id: 'student-2',
+          full_name: 'Trần Thị B',
+          email: 'tranthib@email.com'
+        }
+      }
     }
+  ];
 
-    return res.status(201).json({
-      success: true,
-      data: createdAttendance,
-      message: `Đã tạo điểm danh cho ${createdAttendance?.length || 0} học sinh`
-    });
-
-  } catch (error) {
-    console.error('Bulk attendance creation error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Lỗi khi tạo điểm danh hàng loạt' 
-    });
-  }
+  return res.status(201).json({
+    success: true,
+    data: bulkAttendance,
+    message: `Đã tạo điểm danh cho ${bulkAttendance.length} học sinh`
+  });
 }
