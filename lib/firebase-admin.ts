@@ -40,6 +40,9 @@ export const COLLECTIONS = {
   ATTENDANCE: 'attendance',
   FINANCES: 'finances',
   TASKS: 'tasks',
+  ADMISSIONS: 'admissions',
+  REQUESTS: 'requests',
+  METADATA: 'metadata',
 } as const
 
 // Subcollection names constants

@@ -1,10 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { verifyAuthToken, adminDb } from '../firebase-admin';
 
 export interface AuthUser {
   id: string;
@@ -15,7 +10,7 @@ export interface AuthUser {
 
 export interface AuthContext {
   user: AuthUser;
-  supabase: typeof supabase;
+  db: typeof adminDb;
 }
 
 // Role hierarchy - higher roles include permissions of lower roles
@@ -37,7 +32,7 @@ const ROLE_HIERARCHY: Record<Role, Role[]> = {
 };
 
 /**
- * Extract user information from JWT token
+ * Extract user information from Firebase ID token
  */
 export async function getUserFromRequest(req: NextApiRequest): Promise<AuthUser | null> {
   try {
@@ -49,18 +44,17 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<AuthUser 
 
     const token = authHeader.substring(7);
     
-    // Verify the JWT token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // Verify the Firebase ID token
+    const result = await verifyAuthToken(token);
     
-    if (error || !user) {
+    if (!result.success || !result.user) {
       return null;
     }
 
     return {
-      id: user.id,
-      email: user.email!,
-      role: user.user_metadata?.role || ROLES.STUDENT,
-      full_name: user.user_metadata?.full_name
+      id: result.user.uid,
+      email: result.user.email!,
+      role: result.user.role || ROLES.STUDENT,
     };
   } catch (error) {
     console.error('Error extracting user from request:', error);
@@ -100,25 +94,9 @@ export function withAuth(
         });
       }
 
-      // Create authenticated Supabase client
-      const authHeader = req.headers.authorization;
-      const token = authHeader?.substring(7);
-      
-      const authenticatedSupabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        }
-      );
-
       const context: AuthContext = {
         user,
-        supabase: authenticatedSupabase
+        db: adminDb
       };
 
       await handler(req, res, context);

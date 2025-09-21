@@ -1,108 +1,83 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { FirebaseAdmin, COLLECTIONS } from '@/lib/firebase-admin';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { withAuth, withTeacherOrAdmin } from '../../../lib/auth/rbac';
+import { COLLECTIONS, getTimestamp } from '../../../lib/firebase-admin';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+// GET /api/facilities - Get all facilities
+const getFacilities = withAuth(async (req, res, { user, db }) => {
   try {
-    switch (req.method) {
-      case 'GET':
-        return await getFacilities(req, res);
-      case 'POST':
-        return await createFacility(req, res);
-      default:
-        res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ 
-          success: false, 
-          message: `Phương thức ${req.method} không được hỗ trợ` 
-        });
-    }
-  } catch (error) {
-    console.error('API Error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Lỗi máy chủ nội bộ' 
-    });
-  }
-}
+    const snapshot = await db.collection(COLLECTIONS.FACILITIES)
+      .orderBy('created_at', 'desc')
+      .get();
 
-async function getFacilities(req: NextApiRequest, res: NextApiResponse) {
-  const { status, limit = 50, offset = 0 } = req.query;
-
-  try {
-    const filters: any = {
-      orderBy: { field: 'created_at', direction: 'desc' },
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string)
-    };
-
-    const whereConditions: any[] = [];
-
-    if (status) {
-      whereConditions.push(['status', '==', status]);
-    }
-
-    if (whereConditions.length > 0) {
-      filters.where = whereConditions;
-    }
-
-    const result = await FirebaseAdmin.getCollection(COLLECTIONS.FACILITIES, filters);
-
-    if (!result.success) {
-      console.error('Firebase error:', result.error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Không thể lấy danh sách cơ sở' 
-      });
-    }
+    const facilities = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
     return res.status(200).json({
       success: true,
-      data: result.data || [],
-      message: 'Lấy danh sách cơ sở thành công'
+      data: facilities,
+      message: 'Facilities retrieved successfully'
     });
+
   } catch (error) {
-    console.error('Error fetching facilities:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể lấy danh sách cơ sở' 
+    console.error('Get facilities error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to retrieve facilities'
     });
   }
-}
+});
 
-async function createFacility(req: NextApiRequest, res: NextApiResponse) {
+// POST /api/facilities - Create facility (Teachers/Admins only)
+const createFacility = withTeacherOrAdmin(async (req, res, { user, db }) => {
   const { name, status = 'active', data = {} } = req.body;
 
   if (!name) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Tên cơ sở là bắt buộc' 
+    return res.status(400).json({
+      success: false,
+      message: 'Facility name is required'
     });
   }
 
   try {
-    const result = await FirebaseAdmin.createDocument(COLLECTIONS.FACILITIES, {
+    const newFacility = {
       name,
       status,
-      data
-    });
+      data,
+      created_at: getTimestamp(),
+      updated_at: getTimestamp()
+    };
 
-    if (!result.success) {
-      console.error('Firebase error:', result.error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Không thể tạo cơ sở mới' 
-      });
-    }
+    const docRef = await db.collection(COLLECTIONS.FACILITIES).add(newFacility);
+    const createdFacility = { id: docRef.id, ...newFacility };
 
     return res.status(201).json({
       success: true,
-      data: result.data,
-      message: 'Tạo cơ sở mới thành công'
+      data: createdFacility,
+      message: 'Facility created successfully'
     });
+
   } catch (error) {
-    console.error('Error creating facility:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Không thể tạo cơ sở mới' 
+    console.error('Create facility error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to create facility'
     });
+  }
+});
+
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  switch (req.method) {
+    case 'GET':
+      return getFacilities(req, res);
+    case 'POST':
+      return createFacility(req, res);
+    default:
+      res.setHeader('Allow', ['GET', 'POST']);
+      return res.status(405).json({ 
+        success: false, 
+        message: `Method ${req.method} not allowed` 
+      });
   }
 }

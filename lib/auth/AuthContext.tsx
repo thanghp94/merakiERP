@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { 
+  signInWithEmailAndPassword, 
+  signOut as firebaseSignOut, 
+  onAuthStateChanged, 
+  User as FirebaseUser,
+  IdTokenResult
+} from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface User {
   id: string;
@@ -40,85 +42,111 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
+  const [idToken, setIdToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          user_metadata: {
-            role: session.user.user_metadata?.role || 'student',
-            full_name: session.user.user_metadata?.full_name,
-          },
-        });
-      }
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          user_metadata: {
-            role: session.user.user_metadata?.role || 'student',
-            full_name: session.user.user_metadata?.full_name,
-          },
-        });
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        try {
+          // Get the ID token with custom claims (roles)
+          const tokenResult: IdTokenResult = await firebaseUser.getIdTokenResult();
+          const token = await firebaseUser.getIdToken();
+          
+          setIdToken(token);
+          
+          const role = tokenResult.claims.role || 'student'; // Default role
+          const full_name = tokenResult.claims.full_name || firebaseUser.displayName || '';
+          
+          setUser({
+            id: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            user_metadata: {
+              role: role as string,
+              full_name: full_name as string,
+            },
+          });
+        } catch (error) {
+          console.error('Error getting user token:', error);
+          setUser(null);
+          setIdToken(null);
+        }
       } else {
         setUser(null);
+        setIdToken(null);
       }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        setLoading(false);
-        return { error: error.message };
-      }
-
-      if (data.user) {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      if (firebaseUser) {
+        // Get the ID token with custom claims
+        const tokenResult = await firebaseUser.getIdTokenResult();
+        const token = await firebaseUser.getIdToken();
+        
+        setIdToken(token);
+        
+        const role = tokenResult.claims.role || 'student';
+        const full_name = tokenResult.claims.full_name || firebaseUser.displayName || '';
+        
         setUser({
-          id: data.user.id,
-          email: data.user.email!,
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
           user_metadata: {
-            role: data.user.user_metadata?.role || 'student',
-            full_name: data.user.user_metadata?.full_name,
+            role: role as string,
+            full_name: full_name as string,
           },
         });
-        setSession(data.session);
+        setLoading(false);
+        return { error: null };
+      } else {
+        setLoading(false);
+        return { error: 'No user returned from authentication' };
       }
-
-      setLoading(false);
-      return { error: null };
     } catch (error: any) {
       setLoading(false);
-      return { error: error.message || 'Login failed' };
+      let errorMessage = 'Login failed';
+      
+      // Handle specific Firebase auth errors
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'User not found';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'Account has been disabled';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later';
+          break;
+        default:
+          errorMessage = error.message || 'Login failed';
+      }
+      
+      return { error: errorMessage };
     }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
+    try {
+      await firebaseSignOut(auth);
+      setUser(null);
+      setIdToken(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const getAuthHeaders = (): { [key: string]: string } => {
@@ -126,8 +154,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       'Content-Type': 'application/json',
     };
     
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+    if (idToken) {
+      headers['Authorization'] = `Bearer ${idToken}`;
     }
     
     return headers;
